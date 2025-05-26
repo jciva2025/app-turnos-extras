@@ -22,11 +22,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { PlusCircle, CalendarSearch, Loader2, Users, Send } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, Timestamp, onSnapshot, limit } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, Timestamp, onSnapshot, limit, doc } from 'firebase/firestore';
 
 const currentYear = getYear(new Date());
 const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
@@ -72,6 +72,7 @@ export default function DashboardPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isSendingChatMessage, setIsSendingChatMessage] = useState(false);
   const chatScrollAreaRef = useRef<HTMLDivElement>(null);
+  const isInitialChatLoadRef = useRef(true); // Ref to track initial chat load
 
   const isAdmin = useMemo(() => currentUser?.teamId === 'admin', [currentUser]);
 
@@ -93,9 +94,10 @@ export default function DashboardPage() {
 
     if (isAdmin) {
       if (adminSelectedTeamId) {
-        const teamDetails = TEAMS[adminSelectedTeamId as keyof typeof TEAMS]; // Type assertion for safety
+        const teamDetails = TEAMS[adminSelectedTeamId as keyof typeof TEAMS];
         if (teamDetails && teamDetails.members.length > 0) {
-          memberIdToFetch = teamDetails.members[0]; // Fetch schedule for the first member of the selected team
+          // For admin view, always fetch schedule for the first member of the selected team as representative
+          memberIdToFetch = TEAM_MEMBERS.find(m => m.teamId === adminSelectedTeamId)?.id;
           currentTeamMembers = teamDetails.members
             .map(id => TEAM_MEMBERS.find(m => m.id === id))
             .filter(Boolean) as TeamMember[];
@@ -115,7 +117,6 @@ export default function DashboardPage() {
 
     if (memberIdToFetch && dateRange?.from && dateRange?.to) {
       setIsLoadingSchedule(true);
-      // Simulating async fetch, replace with actual data fetching if needed
       setTimeout(() => {
         const fetchedShifts = getShiftsForDateRange(memberIdToFetch!, dateRange.from!, dateRange.to!);
         setShifts(fetchedShifts);
@@ -127,10 +128,10 @@ export default function DashboardPage() {
       setShifts([]);
       setAnalytics(null);
       if (isAdmin && !adminSelectedTeamId) {
-         setIsLoadingSchedule(false); // Stop loading if admin hasn't selected a team
+         setIsLoadingSchedule(false);
       }
     }
-  }, [currentUser, dateRange, isAdmin, adminSelectedTeamId]); // Removed getInitials from dependencies
+  }, [currentUser, dateRange, isAdmin, adminSelectedTeamId]);
 
   const getPeriodDates = useCallback((year: number, month: number, quincena: 'first' | 'second') => {
     const firstDayOfMonth = new Date(year, month, 1);
@@ -153,7 +154,7 @@ export default function DashboardPage() {
   }, []);
 
   const fetchExtraHoursLog = useCallback(async () => {
-    if (!currentUser || isAdmin) return; // Admin does not log or see personal extra hours here
+    if (!currentUser || isAdmin) return;
 
     setIsLoadingLog(true);
     const { startDateString, endDateString } = getPeriodDates(selectedYear, selectedMonth, selectedQuincena);
@@ -190,13 +191,13 @@ export default function DashboardPage() {
   }, [currentUser, selectedYear, selectedMonth, selectedQuincena, toast, getPeriodDates, isAdmin]);
 
   useEffect(() => {
-    if (!isAdmin && currentUser) { // Only fetch for non-admin users
+    if (!isAdmin && currentUser) {
         fetchExtraHoursLog();
     }
   }, [fetchExtraHoursLog, isAdmin, currentUser]);
 
   const handleLogExtraHours = async () => {
-    if (isAdmin || !extraHoursDate || !extraHoursCount || !currentUser) { // Admin cannot log extra hours
+    if (isAdmin || !extraHoursDate || !extraHoursCount || !currentUser) {
       toast({ title: "Error", description: "Por favor, completa la fecha y las horas.", variant: "destructive" });
       return;
     }
@@ -223,7 +224,6 @@ export default function DashboardPage() {
       setExtraHoursDate('');
       setExtraHoursCount('');
       setExtraHoursNotes('');
-      // Re-fetch log if the logged date falls within the currently selected period
       const { startDateString: currentPeriodStart, endDateString: currentPeriodEnd } = getPeriodDates(selectedYear, selectedMonth, selectedQuincena);
       if (extraHoursData.date >= currentPeriodStart && extraHoursData.date <= currentPeriodEnd) {
         fetchExtraHoursLog();
@@ -243,22 +243,79 @@ export default function DashboardPage() {
   // Chat useEffect for fetching messages
   useEffect(() => {
     if (!currentUser) return;
+    isInitialChatLoadRef.current = true; // Reset on current user change or mount
 
     const q = query(collection(db, "messages"), orderBy("timestamp", "asc"), limit(50));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const messages: ChatMessage[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        messages.push({
-          id: doc.id,
-          userId: data.userId,
-          userName: data.userName,
-          userPhotoUrl: data.userPhotoUrl,
-          text: data.text,
-          timestamp: data.timestamp instanceof Timestamp ? data.timestamp.toDate() : new Date(), // Convert Firestore Timestamp to JS Date
-        });
+      let playSoundForNewMessage = false;
+
+      querySnapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const newMessageData = change.doc.data();
+          messages.push({
+            id: change.doc.id,
+            userId: newMessageData.userId,
+            userName: newMessageData.userName,
+            userPhotoUrl: newMessageData.userPhotoUrl,
+            text: newMessageData.text,
+            timestamp: newMessageData.timestamp instanceof Timestamp ? newMessageData.timestamp.toDate() : new Date(),
+          });
+
+          // Determine if sound should be played
+          if (!isInitialChatLoadRef.current && currentUser && newMessageData.userId !== currentUser.id && !isAdmin) {
+            playSoundForNewMessage = true;
+          }
+        }
       });
-      setChatMessages(messages);
+      
+      // If only existing messages are being mapped on initial load, do it this way:
+      if (isInitialChatLoadRef.current && messages.length === 0) { // check if messages were processed by docChanges
+         querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            messages.push({
+                id: doc.id,
+                userId: data.userId,
+                userName: data.userName,
+                userPhotoUrl: data.userPhotoUrl,
+                text: data.text,
+                timestamp: data.timestamp instanceof Timestamp ? data.timestamp.toDate() : new Date(),
+            });
+        });
+      }
+
+
+      setChatMessages(prevMessages => {
+        // This logic ensures we're merging new messages correctly if some were already set
+        // For simplicity, if docChanges is used, it might replace the whole array or append.
+        // Here, we are rebuilding the array from scratch with new messages from docChanges
+        // and then re-sorting if necessary, or relying on Firestore's order.
+        // A more sophisticated merge would be needed if we were paginating or had local optimistic updates not reflected in docChanges.
+        
+        const existingMessageIds = new Set(prevMessages.map(m => m.id));
+        const newUniqueMessages = messages.filter(m => !existingMessageIds.has(m.id));
+        
+        // Sort all messages by timestamp after merging
+        const allMessages = [...prevMessages, ...newUniqueMessages];
+        allMessages.sort((a, b) => {
+          const tsA = a.timestamp instanceof Date ? a.timestamp.getTime() : 0;
+          const tsB = b.timestamp instanceof Date ? b.timestamp.getTime() : 0;
+          return tsA - tsB;
+        });
+        // Limit to the last 50 or so
+        return allMessages.slice(-50);
+      });
+
+
+      if (playSoundForNewMessage) {
+        const audio = new Audio('/notification.mp3'); // Make sure this file is in public/
+        audio.play().catch(error => console.error("Error playing sound:", error));
+      }
+      
+      if (isInitialChatLoadRef.current) {
+        isInitialChatLoadRef.current = false;
+      }
+
     }, (error) => {
       console.error("Error al obtener mensajes del chat: ", error);
       toast({
@@ -268,10 +325,9 @@ export default function DashboardPage() {
       });
     });
 
-    return () => unsubscribe(); // Cleanup listener on component unmount
-  }, [currentUser, toast]);
+    return () => unsubscribe();
+  }, [currentUser, toast, isAdmin]); // isAdmin added to dependencies
 
-  // Auto-scroll chat
    useEffect(() => {
     if (chatScrollAreaRef.current) {
       const scrollElement = chatScrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
@@ -289,7 +345,7 @@ export default function DashboardPage() {
       await addDoc(collection(db, "messages"), {
         userId: currentUser.id,
         userName: currentUser.name,
-        userPhotoUrl: currentUser.photoUrl,
+        userPhotoUrl: currentUser.photoUrl || '', // Ensure photoUrl is not undefined
         text: chatMessage.trim(),
         timestamp: serverTimestamp(),
       });
@@ -339,7 +395,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <Select
-              onValueChange={(value: string) => setAdminSelectedTeamId(value as TeamId)} // Ensure value is TeamId
+              onValueChange={(value: string) => setAdminSelectedTeamId(value as TeamId)}
               value={adminSelectedTeamId || ""}
             >
               <SelectTrigger className="w-full sm:w-[280px]">
@@ -375,13 +431,13 @@ export default function DashboardPage() {
 
       <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className={`grid w-full mb-4 ${isAdmin ? 'grid-cols-1' : 'grid-cols-3'}`}>
-          <TabsTrigger value="schedule" className={isAdmin ? '' : 'hidden'}>Horario Equipo</TabsTrigger>
+          <TabsTrigger value="schedule" className={!isAdmin ? 'hidden' : ''}>Horario Equipo</TabsTrigger>
           {!isAdmin && <TabsTrigger value="registerHours">Registrar Horas Extra</TabsTrigger>}
           {!isAdmin && <TabsTrigger value="historyHours">Historial Horas Extra</TabsTrigger>}
           {!isAdmin && <TabsTrigger value="chat">Chat de Equipo</TabsTrigger>}
         </TabsList>
 
-        <TabsContent value="schedule" className={isAdmin ? '' : 'hidden'}>
+        <TabsContent value="schedule" className={!isAdmin ? 'hidden' : ''}>
            <Card className="shadow-md">
             <CardHeader>
               <CardTitle>Seleccionar Rango de Fechas para Horario</CardTitle>
@@ -521,7 +577,7 @@ export default function DashboardPage() {
                             {msg.userId !== currentUser.id && <p className="text-xs font-semibold mb-1">{msg.userName}</p>}
                             <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
                             <p className={`text-xs mt-1 ${msg.userId === currentUser.id ? 'text-primary-foreground/70' : 'text-muted-foreground/70'} ${msg.userId === currentUser.id ? 'text-right' : 'text-left'}`}>
-                              {msg.timestamp ? format(msg.timestamp instanceof Timestamp ? msg.timestamp.toDate() : msg.timestamp, 'HH:mm', { locale: es }) : 'Enviando...'}
+                              {msg.timestamp && msg.timestamp instanceof Date ? format(msg.timestamp, 'HH:mm', { locale: es }) : 'Enviando...'}
                             </p>
                           </div>
                            {msg.userId === currentUser.id && (
@@ -560,5 +616,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
