@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { TeamMember } from '@/lib/types';
 import { TEAM_MEMBERS } from '@/lib/constants';
 import { LoginModal } from '@/components/auth/LoginModal';
@@ -9,10 +9,35 @@ import { AppLogo } from '@/components/common/AppLogo';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
+import { Clock } from 'lucide-react';
 
 export default function HomePage() {
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentDateTime, setCurrentDateTime] = useState<string>('');
+
+  useEffect(() => {
+    const updateDateTime = () => {
+      const now = new Date();
+      const options: Intl.DateTimeFormatOptions = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZone: 'America/Argentina/San_Luis',
+        hour12: false,
+      };
+      setCurrentDateTime(new Intl.DateTimeFormat('es-AR', options).format(now));
+    };
+
+    updateDateTime(); // Initial call
+    const intervalId = setInterval(updateDateTime, 1000); // Update every second
+
+    return () => clearInterval(intervalId); // Cleanup interval on component unmount
+  }, []);
 
   const handleMemberSelect = (member: TeamMember) => {
     setSelectedMember(member);
@@ -44,8 +69,16 @@ export default function HomePage() {
       style={{ backgroundImage: "url('/fondodepantalla.jpg')" }}
       data-ai-hint="industrial factory"
     >
-      <header className="mb-12 z-10">
-        <AppLogo size="lg" />
+      <header className="mb-8 z-10 text-center">
+        <div className="inline-block bg-card/80 backdrop-blur-sm p-4 rounded-lg shadow-md">
+          <AppLogo size="lg" />
+          {currentDateTime && (
+            <div className="mt-2 text-sm text-foreground/90 flex items-center justify-center">
+              <Clock size={16} className="mr-2" />
+              {currentDateTime.charAt(0).toUpperCase() + currentDateTime.slice(1)}
+            </div>
+          )}
+        </div>
       </header>
 
       <Card className="w-full max-w-2xl shadow-xl z-10 bg-card/80 backdrop-blur-sm">
