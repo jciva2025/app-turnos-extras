@@ -5,9 +5,9 @@ export function AppLogo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   const iconSize = size === "sm" ? 5 : size === "md" ? 6 : 7;
 
   return (
-    <div className="flex items-center space-x-2 text-primary">
-      <Briefcase className={`h-${iconSize} w-${iconSize}`} />
-      <h1 className={`font-bold ${textSizeClass}`}>Cuarto turno mtto. Mecanizado.</h1>
+    <div className="flex items-center space-x-2">
+      <Briefcase className={`h-${iconSize} w-${iconSize} text-primary`} />
+      <h1 className={`font-bold ${textSizeClass} text-black`}>Cuarto turno mtto. Mecanizado.</h1>
     </div>
   );
 }
