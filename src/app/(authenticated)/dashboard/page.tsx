@@ -4,13 +4,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+// import { es } from 'date-fns/locale'; // No se usa directamente aquí, pero sí en DateRangePicker
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { ScheduleDisplay } from '@/components/dashboard/ScheduleDisplay';
 import { ShiftAnalyticsDisplay } from '@/components/dashboard/ShiftAnalyticsDisplay';
-import type { Shift, ShiftAnalyticsData } from '@/lib/types';
+import type { Shift, ShiftAnalyticsData, ExtraHoursEntry } from '@/lib/types';
 import { getShiftsForDateRange, calculateShiftAnalytics } from '@/lib/schedule';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -18,8 +18,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PlusCircle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-// Firebase db instance might be used for extra hours in the future, so db import is kept.
-// import { db } from '@/lib/firebase'; 
+import { db } from '@/lib/firebase'; 
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 
 export default function DashboardPage() {
@@ -37,6 +37,7 @@ export default function DashboardPage() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [analytics, setAnalytics] = useState<ShiftAnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoggingExtraHours, setIsLoggingExtraHours] = useState(false);
 
   // Extra hours states
   const [extraHoursDate, setExtraHoursDate] = useState<string>('');
@@ -46,7 +47,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (currentUser && dateRange?.from && dateRange?.to) {
       setIsLoading(true);
-      // Simulate async data fetching for shifts
+      // Simulate async data fetching for shifts (can be replaced with actual async fetch if needed)
       setTimeout(() => {
         const fetchedShifts = getShiftsForDateRange(currentUser.id, dateRange.from!, dateRange.to!);
         setShifts(fetchedShifts);
@@ -60,17 +61,44 @@ export default function DashboardPage() {
     }
   }, [currentUser, dateRange]);
   
-  const handleLogExtraHours = () => {
-    if (extraHoursDate && extraHoursCount && currentUser) {
-      // This would typically send to Firebase
+  const handleLogExtraHours = async () => {
+    if (!extraHoursDate || !extraHoursCount || !currentUser) {
+       toast({ title: "Error", description: "Por favor, completa la fecha y las horas.", variant: "destructive" });
+       return;
+    }
+
+    const hours = parseFloat(String(extraHoursCount));
+    if (isNaN(hours) || hours <= 0) {
+      toast({ title: "Error", description: "La cantidad de horas debe ser un número positivo.", variant: "destructive" });
+      return;
+    }
+
+    setIsLoggingExtraHours(true);
+    try {
+      const extraHoursData: Omit<ExtraHoursEntry, 'id'> = { // Omit 'id' as Firestore generates it
+        userId: currentUser.id,
+        date: extraHoursDate,
+        hours: hours,
+        loggedAt: serverTimestamp(), // Firestore will set this to the server's time
+      };
+
+      const docRef = await addDoc(collection(db, "extraHoursEntries"), extraHoursData);
+      
       toast({
-        title: "Horas Extra Registradas (Simuladas)",
-        description: `${extraHoursCount} horas el ${extraHoursDate} para ${currentUser.name}. El registro real requiere Firebase.`,
+        title: "Horas Extra Registradas",
+        description: `${hours} horas el ${format(new Date(extraHoursDate), 'dd/MM/yyyy')} para ${currentUser.name} fueron registradas con éxito (ID: ${docRef.id}).`,
       });
       setExtraHoursDate('');
       setExtraHoursCount('');
-    } else {
-       toast({ title: "Error", description: "Por favor, completa la fecha y las horas.", variant: "destructive" });
+    } catch (error) {
+      console.error("Error al registrar horas extra: ", error);
+      toast({
+        title: "Error de Registro",
+        description: "No se pudieron registrar las horas extras. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoggingExtraHours(false);
     }
   };
 
@@ -119,7 +147,7 @@ export default function DashboardPage() {
           <Card className="shadow-md">
             <CardHeader>
               <CardTitle>Registrar Horas Extra</CardTitle>
-              <CardDescription>Registra cualquier hora extra trabajada. (Funcionalidad simulada)</CardDescription>
+              <CardDescription>Registra cualquier hora extra trabajada.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -129,6 +157,7 @@ export default function DashboardPage() {
                   type="date"
                   value={extraHoursDate}
                   onChange={(e) => setExtraHoursDate(e.target.value)}
+                  disabled={isLoggingExtraHours}
                 />
               </div>
               <div>
@@ -138,11 +167,13 @@ export default function DashboardPage() {
                   type="number"
                   placeholder="ej., 4"
                   value={extraHoursCount}
-                  onChange={(e) => setExtraHoursCount(parseFloat(e.target.value) || '')}
+                  onChange={(e) => setExtraHoursCount(e.target.value)} // Keep as string, parse on submit
+                  disabled={isLoggingExtraHours}
                 />
               </div>
-              <Button onClick={handleLogExtraHours} className="w-full"><PlusCircle className="h-4 w-4 mr-2" /> Registrar Horas</Button>
-              <p className="text-xs text-muted-foreground text-center pt-2">Nota: El registro de horas extra es simulado y requiere un backend (como Firebase) para persistencia.</p>
+              <Button onClick={handleLogExtraHours} className="w-full" disabled={isLoggingExtraHours}>
+                {isLoggingExtraHours ? "Registrando..." : <><PlusCircle className="h-4 w-4 mr-2" /> Registrar Horas</>}
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
