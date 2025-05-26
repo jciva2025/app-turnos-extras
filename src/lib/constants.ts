@@ -19,16 +19,22 @@ export const TEAMS: Record<TeamId, Team> = {
   team_d: { id: 'team_d', name: 'Turno D', members: ['andres_f', 'matias_v'] },
 };
 
-export const REFERENCE_DATE = new Date(2025, 4, 27); // May 27, 2025 (month is 0-indexed)
+// Ajuste: La REFERENCE_DATE se cambia al 24 de mayo de 2025 para alinear con el ejemplo del usuario.
+// El 24 de mayo de 2025 será el día 0 del ciclo.
+export const REFERENCE_DATE = new Date(2025, 4, 24); // May 24, 2025 (month is 0-indexed)
 export const CYCLE_LENGTH = 13; // days
 
+// Ajuste: SHIFT_PATTERN modificado para que el primer bloque (días 0-2 del ciclo)
+// coincida con el ejemplo: team_a (día), team_b (noche) durante 3 días.
+// El resto del patrón se ajusta para mantener la rotación y el ciclo de 13 días.
 export const SHIFT_PATTERN: ShiftBlock[] = [
-  { duration: 3, assignments: { day: 'team_c', night: 'team_d' } }, // Days 0-2
-  { duration: 2, assignments: { day: 'team_a', night: 'team_b' } }, // Days 3-4
-  { duration: 2, assignments: { day: 'team_c', night: 'team_d' } }, // Days 5-6
-  { duration: 3, assignments: { day: 'team_b', night: 'team_a' } }, // Days 7-9
-  { duration: 3, assignments: { day: 'team_d', night: 'team_c' } }, // Days 10-12
+  { duration: 3, assignments: { day: 'team_a', night: 'team_b' } }, // Days 0-2
+  { duration: 2, assignments: { day: 'team_c', night: 'team_d' } }, // Days 3-4
+  { duration: 3, assignments: { day: 'team_b', night: 'team_a' } }, // Days 5-7
+  { duration: 3, assignments: { day: 'team_d', night: 'team_c' } }, // Days 8-10
+  { duration: 2, assignments: { day: 'team_c', night: 'team_d' } }  // Days 11-12
 ];
+
 
 export const DAY_SHIFT_START = "06:00";
 export const DAY_SHIFT_END = "18:00";
