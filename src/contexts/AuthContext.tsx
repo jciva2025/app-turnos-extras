@@ -2,7 +2,7 @@
 "use client";
 
 import type { ReactNode } from 'react';
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { TeamMember } from '@/lib/types';
 import { TEAM_MEMBERS } from '@/lib/constants';
@@ -26,7 +26,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (storedUser) {
       try {
         const user = JSON.parse(storedUser) as TeamMember;
-        // Basic validation, you might want to check against TEAM_MEMBERS as well
         if (user && user.id && user.name) {
           setCurrentUser(user);
         } else {
@@ -40,26 +39,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(false);
   }, []);
 
-  const login = (memberId: string, key: string): boolean => {
+  const login = useCallback((memberId: string, key: string): boolean => {
     const member = TEAM_MEMBERS.find(m => m.id === memberId);
     if (member && member.loginKey === key) {
       setCurrentUser(member);
       localStorage.setItem('currentUser', JSON.stringify(member));
-      // Todos los usuarios van al dashboard, la página del dashboard se adaptará si es admin.
-      router.push('/dashboard');
+      if (member.teamId === 'admin') {
+        router.push('/dashboard'); // Admin también va al dashboard ahora
+      } else {
+        router.push('/dashboard');
+      }
       return true;
     }
     return false;
-  };
+  }, [router]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setCurrentUser(null);
     localStorage.removeItem('currentUser');
     router.push('/');
-  };
+  }, [router]);
+
+  const contextValue = useMemo(() => ({
+    currentUser,
+    login,
+    logout,
+    isLoading
+  }), [currentUser, login, logout, isLoading]);
 
   return (
-    <AuthContext.Provider value={{ currentUser, login, logout, isLoading }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
@@ -72,4 +81,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
