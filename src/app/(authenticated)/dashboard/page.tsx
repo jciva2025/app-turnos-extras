@@ -11,7 +11,7 @@ import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { ScheduleDisplay } from '@/components/dashboard/ScheduleDisplay';
 import { ShiftAnalyticsDisplay } from '@/components/dashboard/ShiftAnalyticsDisplay';
 import type { Shift, ShiftAnalyticsData, ExtraHoursEntry, TeamId, TeamMember, ChatMessage } from '@/lib/types';
-import { getShiftsForDateRange, calculateShiftAnalytics, getTeamForMember } from '@/lib/schedule';
+import { getShiftsForDateRange, calculateShiftAnalytics } from '@/lib/schedule';
 import { TEAMS, TEAM_MEMBERS } from '@/lib/constants';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -75,35 +75,47 @@ export default function DashboardPage() {
 
   const isAdmin = useMemo(() => currentUser?.teamId === 'admin', [currentUser]);
 
-  const getInitials = (name: string) => {
+  const getInitials = useCallback((name: string) => {
+    if (!name) return '';
     const names = name.split(' ');
     if (names.length > 1) {
       return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
     }
-    return names[0].substring(0, 2).toUpperCase();
-  };
+    if (names[0] && names[0].length > 1) {
+      return names[0].substring(0, 2).toUpperCase();
+    }
+    return '';
+  }, []);
 
   useEffect(() => {
     let memberIdToFetch: string | undefined = undefined;
-    setSelectedTeamMembers([]);
+    let currentTeamMembers: TeamMember[] = [];
 
     if (isAdmin) {
       if (adminSelectedTeamId) {
-        const teamDetails = TEAMS[adminSelectedTeamId];
+        const teamDetails = TEAMS[adminSelectedTeamId as keyof typeof TEAMS]; // Type assertion for safety
         if (teamDetails && teamDetails.members.length > 0) {
-          memberIdToFetch = teamDetails.members[0];
-          const members = teamDetails.members
+          memberIdToFetch = teamDetails.members[0]; // Fetch schedule for the first member of the selected team
+          currentTeamMembers = teamDetails.members
             .map(id => TEAM_MEMBERS.find(m => m.id === id))
             .filter(Boolean) as TeamMember[];
-          setSelectedTeamMembers(members);
         }
       }
-    } else {
-      memberIdToFetch = currentUser?.id;
+    } else if (currentUser) {
+      memberIdToFetch = currentUser.id;
+      const userTeam = TEAMS[currentUser.teamId as keyof typeof TEAMS];
+      if (userTeam) {
+        currentTeamMembers = userTeam.members
+          .map(id => TEAM_MEMBERS.find(m => m.id === id))
+          .filter(Boolean) as TeamMember[];
+      }
     }
+    setSelectedTeamMembers(currentTeamMembers);
+
 
     if (memberIdToFetch && dateRange?.from && dateRange?.to) {
       setIsLoadingSchedule(true);
+      // Simulating async fetch, replace with actual data fetching if needed
       setTimeout(() => {
         const fetchedShifts = getShiftsForDateRange(memberIdToFetch!, dateRange.from!, dateRange.to!);
         setShifts(fetchedShifts);
@@ -115,11 +127,11 @@ export default function DashboardPage() {
       setShifts([]);
       setAnalytics(null);
       if (isAdmin && !adminSelectedTeamId) {
-         setIsLoadingSchedule(false);
+         setIsLoadingSchedule(false); // Stop loading if admin hasn't selected a team
       }
     }
-  }, [currentUser, dateRange, isAdmin, adminSelectedTeamId, getInitials]);
-  
+  }, [currentUser, dateRange, isAdmin, adminSelectedTeamId]); // Removed getInitials from dependencies
+
   const getPeriodDates = useCallback((year: number, month: number, quincena: 'first' | 'second') => {
     const firstDayOfMonth = new Date(year, month, 1);
     let startDate: Date;
@@ -141,11 +153,11 @@ export default function DashboardPage() {
   }, []);
 
   const fetchExtraHoursLog = useCallback(async () => {
-    if (!currentUser || isAdmin) return;
+    if (!currentUser || isAdmin) return; // Admin does not log or see personal extra hours here
 
     setIsLoadingLog(true);
     const { startDateString, endDateString } = getPeriodDates(selectedYear, selectedMonth, selectedQuincena);
-    
+
     try {
       const q = query(
         collection(db, "extraHoursEntries"),
@@ -178,13 +190,13 @@ export default function DashboardPage() {
   }, [currentUser, selectedYear, selectedMonth, selectedQuincena, toast, getPeriodDates, isAdmin]);
 
   useEffect(() => {
-    if (!isAdmin && currentUser) {
+    if (!isAdmin && currentUser) { // Only fetch for non-admin users
         fetchExtraHoursLog();
     }
   }, [fetchExtraHoursLog, isAdmin, currentUser]);
 
   const handleLogExtraHours = async () => {
-    if (isAdmin || !extraHoursDate || !extraHoursCount || !currentUser) {
+    if (isAdmin || !extraHoursDate || !extraHoursCount || !currentUser) { // Admin cannot log extra hours
       toast({ title: "Error", description: "Por favor, completa la fecha y las horas.", variant: "destructive" });
       return;
     }
@@ -211,6 +223,7 @@ export default function DashboardPage() {
       setExtraHoursDate('');
       setExtraHoursCount('');
       setExtraHoursNotes('');
+      // Re-fetch log if the logged date falls within the currently selected period
       const { startDateString: currentPeriodStart, endDateString: currentPeriodEnd } = getPeriodDates(selectedYear, selectedMonth, selectedQuincena);
       if (extraHoursData.date >= currentPeriodStart && extraHoursData.date <= currentPeriodEnd) {
         fetchExtraHoursLog();
@@ -259,11 +272,11 @@ export default function DashboardPage() {
   }, [currentUser, toast]);
 
   // Auto-scroll chat
-  useEffect(() => {
+   useEffect(() => {
     if (chatScrollAreaRef.current) {
-      const scrollElement = chatScrollAreaRef.current.children[0] as HTMLElement; // Viewport
-      if (scrollElement && scrollElement.children[0]) { // Content
-         (scrollElement.children[0] as HTMLElement).scrollTop = (scrollElement.children[0] as HTMLElement).scrollHeight;
+      const scrollElement = chatScrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollElement) {
+        scrollElement.scrollTop = scrollElement.scrollHeight;
       }
     }
   }, [chatMessages]);
@@ -293,6 +306,7 @@ export default function DashboardPage() {
     }
   };
 
+
   if (!currentUser) {
     return <div className="text-center p-8">Cargando datos del usuario...</div>;
   }
@@ -300,13 +314,13 @@ export default function DashboardPage() {
   const memoizedScheduleDisplay = useMemo(() => <ScheduleDisplay shifts={shifts} isLoading={isLoadingSchedule} />, [shifts, isLoadingSchedule]);
   const memoizedAnalyticsDisplay = useMemo(() => <ShiftAnalyticsDisplay analytics={analytics} isLoading={isLoadingSchedule} />, [analytics, isLoadingSchedule]);
   const totalHoursForPeriod = extraHoursLog.reduce((sum, entry) => sum + entry.hours, 0);
+  
   const pageTitle = isAdmin ? "Consulta de Horarios de Equipos" : "Panel Principal";
-  const pageDescription = isAdmin 
+  const pageDescription = isAdmin
     ? "Selecciona un equipo y un rango de fechas para ver su horario y análisis."
     : "Visualiza tu horario, analiza tus días de trabajo, gestiona horas extra y chatea con tu equipo.";
 
   const defaultTab = isAdmin ? "schedule" : "registerHours";
-
 
   return (
     <div className="space-y-8">
@@ -325,7 +339,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <Select
-              onValueChange={(value: TeamId) => setAdminSelectedTeamId(value)}
+              onValueChange={(value: string) => setAdminSelectedTeamId(value as TeamId)} // Ensure value is TeamId
               value={adminSelectedTeamId || ""}
             >
               <SelectTrigger className="w-full sm:w-[280px]">
@@ -334,14 +348,14 @@ export default function DashboardPage() {
               <SelectContent>
                 {(Object.keys(TEAMS) as TeamId[]).filter(id => id !== 'admin' && id !== 'unassigned').map(teamId => (
                   <SelectItem key={teamId} value={teamId}>
-                    {TEAMS[teamId].name}
+                    {TEAMS[teamId as keyof typeof TEAMS].name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {adminSelectedTeamId && selectedTeamMembers.length > 0 && (
               <div className="mt-6">
-                <h4 className="text-lg font-semibold mb-3">Integrantes del {TEAMS[adminSelectedTeamId].name}:</h4>
+                <h4 className="text-lg font-semibold mb-3">Integrantes del {TEAMS[adminSelectedTeamId as keyof typeof TEAMS].name}:</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {selectedTeamMembers.map(member => (
                     <Card key={member.id} className="p-3 flex flex-col items-center text-center shadow-sm">
@@ -463,7 +477,7 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <Label className="block mb-1">Quincena</Label>
-                      <RadioGroup value={selectedQuincena} onValueChange={(value: 'first' | 'second') => setSelectedQuincena(value)} className="flex space-x-4">
+                      <RadioGroup value={selectedQuincena} onValueChange={(value) => setSelectedQuincena(value as 'first' | 'second')} className="flex space-x-4">
                         <div className="flex items-center space-x-2"><RadioGroupItem value="first" id="q1" /><Label htmlFor="q1">1-15</Label></div>
                         <div className="flex items-center space-x-2"><RadioGroupItem value="second" id="q2" /><Label htmlFor="q2">16-Fin</Label></div>
                       </RadioGroup>
@@ -546,3 +560,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
