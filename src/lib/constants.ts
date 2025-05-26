@@ -20,25 +20,24 @@ export const TEAMS: Record<TeamId, Team> = {
 };
 
 // Fecha de referencia: 21 de Mayo de 2024.
-// En esta fecha, team_c trabaja de día y team_d de noche, iniciando el ciclo 3-2-2-3.
+// En esta fecha, team_c trabaja de día y team_d de noche, iniciando el ciclo 3-3-2-2.
 export const REFERENCE_DATE = new Date(2024, 4, 21); // Mayo 21, 2024 (month is 0-indexed, 4 = Mayo)
 export const CYCLE_LENGTH = 20; // days
 
-// Patrón de turnos basado en la descripción del usuario:
-// Ciclo de 20 días. Los equipos trabajan en bloques 3-2-2-3.
-// Después de los primeros 10 días (un ciclo 3-2-2-3), los turnos se invierten.
+// Patrón de turnos: 3-3-2-2 y luego se invierte.
+// Total 10 días, luego inversión para otros 10 días.
 export const SHIFT_PATTERN: ShiftBlock[] = [
   // Primeros 10 días del ciclo (turnos estándar)
   { duration: 3, assignments: { day: 'team_c', night: 'team_d' } }, // Días 0-2. C(día)/D(noche) trabajan. A/B francos.
-  { duration: 2, assignments: { day: 'team_a', night: 'team_b' } }, // Días 3-4. A(día)/B(noche) trabajan. C/D francos.
-  { duration: 2, assignments: { day: 'team_c', night: 'team_d' } }, // Días 5-6. C(día)/D(noche) trabajan. A/B francos.
-  { duration: 3, assignments: { day: 'team_a', night: 'team_b' } }, // Días 7-9. A(día)/B(noche) trabajan. C/D francos.
+  { duration: 3, assignments: { day: 'team_a', night: 'team_b' } }, // Días 3-5. A(día)/B(noche) trabajan. C/D francos.
+  { duration: 2, assignments: { day: 'team_c', night: 'team_d' } }, // Días 6-7. C(día)/D(noche) trabajan. A/B francos.
+  { duration: 2, assignments: { day: 'team_a', night: 'team_b' } }, // Días 8-9. A(día)/B(noche) trabajan. C/D francos.
 
   // Siguientes 10 días del ciclo (turnos invertidos)
   { duration: 3, assignments: { day: 'team_d', night: 'team_c' } }, // Días 10-12. D(día)/C(noche) trabajan (invierte C/D). A/B francos.
-  { duration: 2, assignments: { day: 'team_b', night: 'team_a' } }, // Días 13-14. B(día)/A(noche) trabajan (invierte A/B). C/D francos.
-  { duration: 2, assignments: { day: 'team_d', night: 'team_c' } }, // Días 15-16. D(día)/C(noche) trabajan (invierte C/D). A/B francos.
-  { duration: 3, assignments: { day: 'team_b', night: 'team_a' } }, // Días 17-19. B(día)/A(noche) trabajan (invierte A/B). C/D francos.
+  { duration: 3, assignments: { day: 'team_b', night: 'team_a' } }, // Días 13-15. B(día)/A(noche) trabajan (invierte A/B). C/D francos.
+  { duration: 2, assignments: { day: 'team_d', night: 'team_c' } }, // Días 16-17. D(día)/C(noche) trabajan (invierte C/D). A/B francos.
+  { duration: 2, assignments: { day: 'team_b', night: 'team_a' } }, // Días 18-19. B(día)/A(noche) trabajan (invierte A/B). C/D francos.
 ];
 
 
