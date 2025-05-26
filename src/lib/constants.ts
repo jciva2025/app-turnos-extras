@@ -19,9 +19,9 @@ export const TEAMS: Record<TeamId, Team> = {
   team_d: { id: 'team_d', name: 'Turno D', members: ['andres_f', 'matias_v'] },
 };
 
-// Fecha de referencia: 21 de Febrero de 2024.
+// Fecha de referencia: 21 de Mayo de 2024.
 // En esta fecha, team_c trabaja de día y team_d de noche, iniciando el ciclo 3-2-2-3.
-export const REFERENCE_DATE = new Date(2024, 1, 21); // February 21, 2024 (month is 0-indexed, 1 = February)
+export const REFERENCE_DATE = new Date(2024, 4, 21); // Mayo 21, 2024 (month is 0-indexed, 4 = Mayo)
 export const CYCLE_LENGTH = 20; // days
 
 // Patrón de turnos basado en la descripción del usuario:
@@ -73,16 +73,17 @@ export const ARGENTINA_HOLIDAYS: Holiday[] = [
   { date: "2024-04-01", name: "Feriado Puente Turístico"},
   { date: "2024-04-02", name: "Día del Veterano y de los Caídos en la Guerra de Malvinas" },
   { date: "2024-05-01", name: "Día del Trabajador" },
-  { date: "2024-05-25", name: "Día de la Revolución de Mayo" },
+  { date: "2024-05-25", name: "Día de la Revolución de Mayo" }, // Este es un sábado en 2024
   { date: "2024-06-17", name: "Paso a la Inmortalidad del Gral. Don Martín Miguel de Güemes"},
   { date: "2024-06-20", name: "Paso a la Inmortalidad del Gral. Manuel Belgrano" },
   { date: "2024-06-21", name: "Feriado Puente Turístico"},
   { date: "2024-07-09", name: "Día de la Independencia" },
-  { date: "2024-08-17", name: "Paso a la Inmortalidad del Gral. José de San Martín" },
+  { date: "2024-08-17", name: "Paso a la Inmortalidad del Gral. José de San Martín" }, // Este es un sábado en 2024
   { date: "2024-10-11", name: "Feriado Puente Turístico"},
-  { date: "2024-10-12", name: "Día del Respeto a la Diversidad Cultural" },
+  { date: "2024-10-12", name: "Día del Respeto a la Diversidad Cultural" }, // Este es un sábado en 2024
   { date: "2024-11-18", name: "Día de la Soberanía Nacional"}, // Trasladado del 20/11
-  { date: "2024-12-08", name: "Inmaculada Concepción de María" },
+  { date: "2024-12-08", name: "Inmaculada Concepción de María" }, // Este es un domingo en 2024
   { date: "2024-12-25", name: "Navidad" },
 ];
 
+    
