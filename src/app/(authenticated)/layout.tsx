@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -59,7 +60,7 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
           <AppLogo size="md" />
           <div className="flex items-center space-x-4">
             <span className="hidden sm:inline text-sm text-foreground font-medium">
-              Welcome, {currentUser.name}
+              Bienvenido, {currentUser.name}
             </span>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -75,14 +76,14 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">{currentUser.name}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      Team {currentUser.teamId.replace('team_', '').toUpperCase()}
+                      Equipo {currentUser.teamId.replace('team_', '').toUpperCase()}
                     </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout}>
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
+                  <span>Cerrar Sesión</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -95,7 +96,7 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
        <footer className="py-6 md:px-8 md:py-0 border-t bg-card">
         <div className="container flex flex-col items-center justify-between gap-4 md:h-20 md:flex-row">
           <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
-            &copy; {new Date().getFullYear()} ShiftWise. Built with Next.js and ShadCN UI.
+            &copy; {new Date().getFullYear()} ShiftWise. Desarrollado con Next.js y ShadCN UI.
           </p>
         </div>
       </footer>

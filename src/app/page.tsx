@@ -32,11 +32,11 @@ export default function HomePage() {
 
       <Card className="w-full max-w-2xl shadow-xl">
         <CardHeader>
-          <CardTitle className="text-center text-3xl font-semibold text-primary">Select Your Profile</CardTitle>
+          <CardTitle className="text-center text-3xl font-semibold text-primary">Selecciona Tu Perfil</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-center text-muted-foreground mb-8">
-            Click on your name to log in and view your work schedule.
+            Haz clic en tu nombre para iniciar sesión y ver tu horario de trabajo.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {TEAM_MEMBERS.map((member) => (
@@ -69,7 +69,7 @@ export default function HomePage() {
         />
       )}
       <footer className="mt-12 text-center text-muted-foreground text-sm">
-        <p>&copy; {new Date().getFullYear()} ShiftWise. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} ShiftWise. Todos los derechos reservados.</p>
       </footer>
     </div>
   );

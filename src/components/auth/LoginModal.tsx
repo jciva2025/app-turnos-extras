@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { TeamMember } from '@/lib/types';
@@ -40,13 +41,13 @@ export function LoginModal({ member, isOpen, onClose }: LoginModalProps) {
     setError('');
     if (login(member.id, key)) {
       toast({
-        title: "Login Successful",
-        description: `Welcome back, ${member.name}!`,
+        title: "Inicio de Sesión Exitoso",
+        description: `¡Bienvenido de nuevo, ${member.name}!`,
       });
       router.push('/dashboard');
       onClose();
     } else {
-      setError('Invalid key. Please try again.');
+      setError('Clave inválida. Por favor, inténtalo de nuevo.');
     }
   };
 
@@ -65,10 +66,10 @@ export function LoginModal({ member, isOpen, onClose }: LoginModalProps) {
               className="rounded-full mb-2"
               data-ai-hint="person portrait"
             />
-            <DialogTitle className="text-2xl">Login for {member.name}</DialogTitle>
+            <DialogTitle className="text-2xl">Iniciar Sesión para {member.name}</DialogTitle>
           </div>
           <DialogDescription>
-            Enter your pre-assigned key to access your schedule.
+            Ingresa tu clave preasignada para acceder a tu horario.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -80,7 +81,7 @@ export function LoginModal({ member, isOpen, onClose }: LoginModalProps) {
           )}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="key" className="text-right">
-              Key
+              Clave
             </Label>
             <Input
               id="key"
@@ -93,8 +94,8 @@ export function LoginModal({ member, isOpen, onClose }: LoginModalProps) {
           </div>
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="submit" onClick={handleLogin}>Login</Button>
+          <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button type="submit" onClick={handleLogin}>Ingresar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

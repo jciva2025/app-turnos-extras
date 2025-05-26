@@ -1,10 +1,11 @@
+
 "use client";
 
 import type { Shift } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format, getDay } from 'date-fns';
-import { es } from 'date-fns/locale'; // For Spanish day names
+import { es } from 'date-fns/locale'; 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertTriangle, Bed, Briefcase, CalendarDays, Coffee, PartyPopper } from 'lucide-react';
 
@@ -14,9 +15,9 @@ interface ScheduleDisplayProps {
 }
 
 const getDayOfWeekBadgeVariant = (dayOfWeek: number, isHoliday: boolean) => {
-  if (isHoliday) return "destructive"; // Holidays are special
-  if (dayOfWeek === 0 || dayOfWeek === 6) return "secondary"; // Sunday or Saturday
-  return "outline"; // Weekday
+  if (isHoliday) return "destructive"; 
+  if (dayOfWeek === 0 || dayOfWeek === 6) return "secondary"; 
+  return "outline"; 
 };
 
 const getShiftTypeIcon = (shiftType: Shift['shiftType']) => {
@@ -37,8 +38,8 @@ export function ScheduleDisplay({ shifts, isLoading = false }: ScheduleDisplayPr
     return (
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Your Schedule</CardTitle>
-          <CardDescription>Loading schedule details...</CardDescription>
+          <CardTitle>Tu Horario</CardTitle>
+          <CardDescription>Cargando detalles del horario...</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -58,13 +59,13 @@ export function ScheduleDisplay({ shifts, isLoading = false }: ScheduleDisplayPr
     return (
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Your Schedule</CardTitle>
+          <CardTitle>Tu Horario</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center text-center py-10">
             <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-medium text-muted-foreground">No schedule data available for the selected range.</p>
-            <p className="text-sm text-muted-foreground">Please select a valid date range.</p>
+            <p className="text-lg font-medium text-muted-foreground">No hay datos de horario disponibles para el rango seleccionado.</p>
+            <p className="text-sm text-muted-foreground">Por favor, selecciona un rango de fechas válido.</p>
           </div>
         </CardContent>
       </Card>
@@ -74,13 +75,13 @@ export function ScheduleDisplay({ shifts, isLoading = false }: ScheduleDisplayPr
   return (
     <Card className="shadow-lg h-full flex flex-col">
       <CardHeader>
-        <CardTitle>Your Schedule</CardTitle>
+        <CardTitle>Tu Horario</CardTitle>
         <CardDescription>
-          Showing shifts from {format(shifts[0].date, 'PPP', { locale: es })} to {format(shifts[shifts.length - 1].date, 'PPP', { locale: es })}.
+          Mostrando turnos desde {format(shifts[0].date, 'PPP', { locale: es })} hasta {format(shifts[shifts.length - 1].date, 'PPP', { locale: es })}.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow overflow-hidden">
-        <ScrollArea className="h-[calc(100%-0px)] pr-4"> {/* Adjust height as needed, pr-4 for scrollbar space */}
+        <ScrollArea className="h-[calc(100%-0px)] pr-4"> 
           <div className="space-y-3">
             {shifts.map((shift, index) => (
               <Card key={index} className={`transition-all hover:shadow-md ${shift.shiftType === 'off' ? 'bg-muted/30' : 'bg-card'}`}>
@@ -94,22 +95,22 @@ export function ScheduleDisplay({ shifts, isLoading = false }: ScheduleDisplayPr
                         {format(shift.date, 'EEEE, dd MMMM yyyy', { locale: es })}
                       </h3>
                       <Badge variant={getDayOfWeekBadgeVariant(getDay(shift.date), shift.isHoliday)} className="text-xs ml-2 whitespace-nowrap">
-                        {shift.isHoliday ? 'Holiday' : format(shift.date, 'EEEE', { locale: es })}
+                        {shift.isHoliday ? 'Feriado' : format(shift.date, 'EEEE', { locale: es })}
                       </Badge>
                     </div>
                     
                     {shift.shiftType !== 'off' ? (
                       <p className="text-sm text-foreground">
-                        Shift: <span className="font-medium">{shift.shiftType === 'day' ? 'Day (06:00 - 18:00)' : 'Night (18:00 - 06:00)'}</span>
+                        Turno: <span className="font-medium">{shift.shiftType === 'day' ? 'Día (06:00 - 18:00)' : 'Noche (18:00 - 06:00)'}</span>
                       </p>
                     ) : (
-                      <p className="text-sm text-green-700 font-medium">Day Off</p>
+                      <p className="text-sm text-green-700 font-medium">Día Libre</p>
                     )}
 
                     {shift.isHoliday && (
                       <div className="mt-1 flex items-center text-xs text-destructive">
                         <PartyPopper size={14} className="mr-1" />
-                        <span>{shift.holidayName} (Double Pay)</span>
+                        <span>{shift.holidayName} (Paga Doble)</span>
                       </div>
                     )}
                   </div>

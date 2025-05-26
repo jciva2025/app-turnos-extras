@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -62,9 +63,9 @@ export default function DashboardPage() {
   const handleSendChatMessage = () => {
     if (chatMessage.trim() && currentUser) {
       // This would typically send to Firebase
-      setChatMessages(prev => [...prev, { user: currentUser.name, text: chatMessage, time: new Date().toLocaleTimeString() }]);
+      setChatMessages(prev => [...prev, { user: currentUser.name, text: chatMessage, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
       setChatMessage('');
-      toast({ title: "Chat Message Sent (Simulated)", description: "Real chat requires Firebase backend." });
+      toast({ title: "Mensaje de Chat Enviado (Simulado)", description: "El chat real requiere backend de Firebase." });
     }
   };
 
@@ -72,19 +73,19 @@ export default function DashboardPage() {
     if (extraHoursDate && extraHoursCount && currentUser) {
       // This would typically send to Firebase
       toast({
-        title: "Extra Hours Logged (Simulated)",
-        description: `${extraHoursCount} hours on ${extraHoursDate} for ${currentUser.name}. Real logging requires Firebase.`,
+        title: "Horas Extra Registradas (Simuladas)",
+        description: `${extraHoursCount} horas el ${extraHoursDate} para ${currentUser.name}. El registro real requiere Firebase.`,
       });
       setExtraHoursDate('');
       setExtraHoursCount('');
     } else {
-       toast({ title: "Error", description: "Please fill in date and hours.", variant: "destructive" });
+       toast({ title: "Error", description: "Por favor, completa la fecha y las horas.", variant: "destructive" });
     }
   };
 
 
   if (!currentUser) {
-    return <div className="text-center p-8">Loading user data...</div>;
+    return <div className="text-center p-8">Cargando datos del usuario...</div>;
   }
   
   const memoizedScheduleDisplay = useMemo(() => <ScheduleDisplay shifts={shifts} isLoading={isLoading} />, [shifts, isLoading]);
@@ -94,16 +95,16 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Panel Principal</h1>
         <p className="text-muted-foreground">
-          View your schedule, analyze your workdays, chat with your team, and log extra hours.
+          Visualiza tu horario, analiza tus días de trabajo, chatea con tu equipo y registra horas extra.
         </p>
       </div>
 
       <Card className="shadow-md">
         <CardHeader>
-          <CardTitle>Select Date Range</CardTitle>
-          <CardDescription>Choose the period for which you want to view your schedule and analytics.</CardDescription>
+          <CardTitle>Seleccionar Rango de Fechas</CardTitle>
+          <CardDescription>Elige el período para el cual deseas ver tu horario y análisis.</CardDescription>
         </CardHeader>
         <CardContent>
           <DateRangePicker dateRange={dateRange} onDateRangeChange={setDateRange} />
@@ -121,22 +122,22 @@ export default function DashboardPage() {
 
       <Tabs defaultValue="chat" className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
-          <TabsTrigger value="chat"><Send className="mr-2 h-4 w-4 inline-block" />Team Chat</TabsTrigger>
-          <TabsTrigger value="extraHours"><PlusCircle className="mr-2 h-4 w-4 inline-block" />Log Extra Hours</TabsTrigger>
+          <TabsTrigger value="chat"><Send className="mr-2 h-4 w-4 inline-block" />Chat de Equipo</TabsTrigger>
+          <TabsTrigger value="extraHours"><PlusCircle className="mr-2 h-4 w-4 inline-block" />Registrar Horas Extra</TabsTrigger>
         </TabsList>
         <TabsContent value="chat">
           <Card className="shadow-md">
             <CardHeader>
-              <CardTitle>Team Chat</CardTitle>
-              <CardDescription>Communicate with your team members. (This is a placeholder)</CardDescription>
+              <CardTitle>Chat de Equipo</CardTitle>
+              <CardDescription>Comunícate con los miembros de tu equipo. (Esto es un marcador de posición)</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <ScrollArea className="h-64 w-full rounded-md border p-4 bg-muted/20">
-                {chatMessages.length === 0 && <p className="text-muted-foreground text-sm text-center">No messages yet. Start a conversation!</p>}
+                {chatMessages.length === 0 && <p className="text-muted-foreground text-sm text-center">Aún no hay mensajes. ¡Inicia una conversación!</p>}
                 {chatMessages.map((msg, index) => (
                   <div key={index} className={`mb-2 p-2 rounded-lg ${msg.user === currentUser.name ? 'bg-primary/10 text-primary-foreground items-end flex flex-col' : 'bg-secondary/20'}`}>
                     <p className={`text-xs ${msg.user === currentUser.name ? 'text-primary/80' : 'text-muted-foreground'}`}>
-                      <strong>{msg.user === currentUser.name ? 'You' : msg.user}</strong> <span className="text-xs opacity-70 ml-1">{msg.time}</span>
+                      <strong>{msg.user === currentUser.name ? 'Tú' : msg.user}</strong> <span className="text-xs opacity-70 ml-1">{msg.time}</span>
                     </p>
                     <p className="text-sm">{msg.text}</p>
                   </div>
@@ -145,26 +146,26 @@ export default function DashboardPage() {
               <div className="flex space-x-2">
                 <Input
                   type="text"
-                  placeholder="Type your message..."
+                  placeholder="Escribe tu mensaje..."
                   value={chatMessage}
                   onChange={(e) => setChatMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendChatMessage()}
                 />
-                <Button onClick={handleSendChatMessage}><Send className="h-4 w-4 mr-2" /> Send</Button>
+                <Button onClick={handleSendChatMessage}><Send className="h-4 w-4 mr-2" /> Enviar</Button>
               </div>
-              <p className="text-xs text-muted-foreground text-center pt-2">Note: Chat functionality is simulated and requires Firebase backend for persistence and real-time updates.</p>
+              <p className="text-xs text-muted-foreground text-center pt-2">Nota: La funcionalidad de chat es simulada y requiere un backend de Firebase para persistencia y actualizaciones en tiempo real.</p>
             </CardContent>
           </Card>
         </TabsContent>
         <TabsContent value="extraHours">
           <Card className="shadow-md">
             <CardHeader>
-              <CardTitle>Log Extra Hours</CardTitle>
-              <CardDescription>Record any extra hours worked. (This is a placeholder)</CardDescription>
+              <CardTitle>Registrar Horas Extra</CardTitle>
+              <CardDescription>Registra cualquier hora extra trabajada. (Esto es un marcador de posición)</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label htmlFor="extra-hours-date" className="block text-sm font-medium mb-1">Date</label>
+                <label htmlFor="extra-hours-date" className="block text-sm font-medium mb-1">Fecha</label>
                 <Input
                   id="extra-hours-date"
                   type="date"
@@ -173,17 +174,17 @@ export default function DashboardPage() {
                 />
               </div>
               <div>
-                <label htmlFor="extra-hours-count" className="block text-sm font-medium mb-1">Hours</label>
+                <label htmlFor="extra-hours-count" className="block text-sm font-medium mb-1">Horas</label>
                 <Input
                   id="extra-hours-count"
                   type="number"
-                  placeholder="e.g., 4"
+                  placeholder="ej., 4"
                   value={extraHoursCount}
                   onChange={(e) => setExtraHoursCount(parseFloat(e.target.value) || '')}
                 />
               </div>
-              <Button onClick={handleLogExtraHours} className="w-full"><PlusCircle className="h-4 w-4 mr-2" /> Log Hours</Button>
-              <p className="text-xs text-muted-foreground text-center pt-2">Note: Extra hours logging is simulated and requires Firebase backend for persistence.</p>
+              <Button onClick={handleLogExtraHours} className="w-full"><PlusCircle className="h-4 w-4 mr-2" /> Registrar Horas</Button>
+              <p className="text-xs text-muted-foreground text-center pt-2">Nota: El registro de horas extra es simulado y requiere un backend de Firebase para persistencia.</p>
             </CardContent>
           </Card>
         </TabsContent>

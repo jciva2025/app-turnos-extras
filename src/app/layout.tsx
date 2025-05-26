@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
@@ -16,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'ShiftWise',
-  description: 'Shift scheduling and management app for teams.',
+  description: 'Aplicación de gestión y programación de turnos para equipos.',
 };
 
 export default function RootLayout({
@@ -25,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}>
         <AuthProvider>
           {children}

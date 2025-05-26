@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ShiftAnalyticsData } from '@/lib/types';
@@ -27,8 +28,8 @@ export function ShiftAnalyticsDisplay({ analytics, isLoading = false }: ShiftAna
     return (
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Shift Analytics</CardTitle>
-          <CardDescription>Loading analytics for the selected range...</CardDescription>
+          <CardTitle>Análisis de Turnos</CardTitle>
+          <CardDescription>Cargando análisis para el rango seleccionado...</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[...Array(5)].map((_, i) => (
@@ -51,12 +52,12 @@ export function ShiftAnalyticsDisplay({ analytics, isLoading = false }: ShiftAna
     return (
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Shift Analytics</CardTitle>
-          <CardDescription>No data to analyze. Select a date range and view schedule.</CardDescription>
+          <CardTitle>Análisis de Turnos</CardTitle>
+          <CardDescription>No hay datos para analizar. Selecciona un rango de fechas y visualiza el horario.</CardDescription>
         </CardHeader>
         <CardContent className="text-center py-10">
           <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">Analytics will appear here once schedule data is loaded.</p>
+          <p className="text-muted-foreground">Los análisis aparecerán aquí una vez que se carguen los datos del horario.</p>
         </CardContent>
       </Card>
     );
@@ -65,16 +66,16 @@ export function ShiftAnalyticsDisplay({ analytics, isLoading = false }: ShiftAna
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <CardTitle>Shift Analytics</CardTitle>
-        <CardDescription>Summary of your workdays in the selected period.</CardDescription>
+        <CardTitle>Análisis de Turnos</CardTitle>
+        <CardDescription>Resumen de tus días de trabajo en el período seleccionado.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-4">
-            <StatCard title="Total Work Days" value={analytics.totalWorkDays} icon={<Briefcase className="h-5 w-5 text-muted-foreground" />} />
-            <StatCard title="Weekdays Worked" value={analytics.weekdaysWorked} icon={<CalendarClock className="h-5 w-5 text-muted-foreground" />} />
-            <StatCard title="Saturdays Worked" value={analytics.saturdaysWorked} icon={<SunMedium className="h-5 w-5 text-muted-foreground" />} />
-            <StatCard title="Sundays Worked" value={analytics.sundaysWorked} icon={<MoonStar className="h-5 w-5 text-muted-foreground" />} />
-            <StatCard title="Holidays Worked (Double Pay)" value={analytics.holidaysWorked} icon={<CalendarCheck className="h-5 w-5 text-destructive" />} />
+            <StatCard title="Total Días Trabajados" value={analytics.totalWorkDays} icon={<Briefcase className="h-5 w-5 text-muted-foreground" />} />
+            <StatCard title="Días Laborables Trabajados" value={analytics.weekdaysWorked} icon={<CalendarClock className="h-5 w-5 text-muted-foreground" />} />
+            <StatCard title="Sábados Trabajados" value={analytics.saturdaysWorked} icon={<SunMedium className="h-5 w-5 text-muted-foreground" />} />
+            <StatCard title="Domingos Trabajados" value={analytics.sundaysWorked} icon={<MoonStar className="h-5 w-5 text-muted-foreground" />} />
+            <StatCard title="Feriados Trabajados (Paga Doble)" value={analytics.holidaysWorked} icon={<CalendarCheck className="h-5 w-5 text-destructive" />} />
         </div>
       </CardContent>
     </Card>
