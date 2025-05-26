@@ -27,7 +27,7 @@ export default function HomePage() {
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center p-4 bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: "url('https://placehold.co/1920x1080.png')" }}
+      style={{ backgroundImage: "url('/fondodepantalla.jpg')" }}
       data-ai-hint="industrial factory"
     >
       {/* Optional: Add an overlay for better text readability if needed 
@@ -38,7 +38,7 @@ export default function HomePage() {
         <AppLogo size="lg" />
       </header>
 
-      <Card className="w-full max-w-2xl shadow-xl z-10">
+      <Card className="w-full max-w-2xl shadow-xl z-10 bg-card/80 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="text-center text-3xl font-semibold text-primary">Selecciona Tu Perfil</CardTitle>
         </CardHeader>
@@ -51,7 +51,7 @@ export default function HomePage() {
               <Button
                 key={member.id}
                 variant="outline"
-                className="flex flex-col items-center justify-center p-4 h-auto aspect-square transform transition-all duration-150 hover:scale-105 hover:shadow-lg focus:ring-2 focus:ring-primary bg-card/80 backdrop-blur-sm" // Added bg-card/80 and backdrop-blur for better visibility on image
+                className="flex flex-col items-center justify-center p-4 h-auto aspect-square transform transition-all duration-150 hover:scale-105 hover:shadow-lg focus:ring-2 focus:ring-primary bg-card/80 backdrop-blur-sm"
                 onClick={() => handleMemberSelect(member)}
               >
                 <Image
