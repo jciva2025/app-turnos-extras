@@ -73,7 +73,7 @@ export default function HomePage() {
         <div className="inline-block bg-card/80 backdrop-blur-sm p-4 rounded-lg shadow-md">
           <AppLogo size="lg" />
           {currentDateTime && (
-            <div className="mt-2 text-sm text-foreground/90 flex items-center justify-center">
+            <div className="mt-2 text-sm font-bold text-red-600 flex items-center justify-center">
               <Clock size={16} className="mr-2" />
               {currentDateTime.charAt(0).toUpperCase() + currentDateTime.slice(1)}
             </div>
