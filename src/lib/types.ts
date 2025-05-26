@@ -61,9 +61,8 @@ export interface ShiftAnalyticsData {
 export interface ExtraHoursEntry {
   id?: string; // Firestore ID, optional for creation
   userId: string;
-  date: string; // YYYY-MM-DD
+  date: string; // YYYY-MM-DD, used for querying
   hours: number;
   notes?: string;
-  loggedAt?: Timestamp | Date; // Firestore Timestamp or Date when retrieved
+  loggedAt: Timestamp | Date; // Firestore Timestamp on save, JS Date on retrieval for easier use
 }
-

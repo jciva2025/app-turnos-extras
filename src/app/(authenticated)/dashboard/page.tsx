@@ -3,9 +3,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import type { DateRange } from 'react-day-picker';
-import { format } from 'date-fns';
-// import { es } from 'date-fns/locale'; // No se usa directamente aquí, pero sí en DateRangePicker
-import { startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, getYear, getMonth, setDate, getDate, lastDayOfMonth } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { ScheduleDisplay } from '@/components/dashboard/ScheduleDisplay';
@@ -16,11 +15,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from "@/components/ui/table";
+import { PlusCircle, CalendarSearch, Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { db } from '@/lib/firebase'; 
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
 
+const currentYear = getYear(new Date());
+const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i); // Current year +/- 2 years
+const months = Array.from({ length: 12 }, (_, i) => ({
+  value: i,
+  label: format(new Date(currentYear, i), 'MMMM', { locale: es }),
+}));
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
@@ -36,35 +45,104 @@ export default function DashboardPage() {
 
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [analytics, setAnalytics] = useState<ShiftAnalyticsData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
   const [isLoggingExtraHours, setIsLoggingExtraHours] = useState(false);
 
-  // Extra hours states
+  // Extra hours form states
   const [extraHoursDate, setExtraHoursDate] = useState<string>('');
   const [extraHoursCount, setExtraHoursCount] = useState<number | string>('');
+  const [extraHoursNotes, setExtraHoursNotes] = useState<string>('');
 
+  // Extra hours display states
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  const [selectedMonth, setSelectedMonth] = useState<number>(getMonth(new Date()));
+  const [selectedQuincena, setSelectedQuincena] = useState<'first' | 'second'>(
+    getDate(new Date()) <= 15 ? 'first' : 'second'
+  );
+  const [extraHoursLog, setExtraHoursLog] = useState<ExtraHoursEntry[]>([]);
+  const [isLoadingLog, setIsLoadingLog] = useState(false);
 
   useEffect(() => {
     if (currentUser && dateRange?.from && dateRange?.to) {
-      setIsLoading(true);
-      // Simulate async data fetching for shifts (can be replaced with actual async fetch if needed)
+      setIsLoadingSchedule(true);
       setTimeout(() => {
         const fetchedShifts = getShiftsForDateRange(currentUser.id, dateRange.from!, dateRange.to!);
         setShifts(fetchedShifts);
         const calculatedAnalytics = calculateShiftAnalytics(fetchedShifts);
         setAnalytics(calculatedAnalytics);
-        setIsLoading(false);
+        setIsLoadingSchedule(false);
       }, 500);
     } else {
       setShifts([]);
       setAnalytics(null);
     }
   }, [currentUser, dateRange]);
-  
+
+  const getPeriodDates = (year: number, month: number, quincena: 'first' | 'second') => {
+    const firstDayOfMonth = new Date(year, month, 1);
+    let startDate: Date;
+    let endDate: Date;
+
+    if (quincena === 'first') {
+      startDate = setDate(firstDayOfMonth, 1);
+      endDate = setDate(firstDayOfMonth, 15);
+    } else {
+      startDate = setDate(firstDayOfMonth, 16);
+      endDate = lastDayOfMonth(firstDayOfMonth);
+    }
+    return {
+      startDateString: format(startDate, 'yyyy-MM-dd'),
+      endDateString: format(endDate, 'yyyy-MM-dd'),
+    };
+  };
+
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const fetchExtraHoursLog = async () => {
+      setIsLoadingLog(true);
+      const { startDateString, endDateString } = getPeriodDates(selectedYear, selectedMonth, selectedQuincena);
+
+      try {
+        const q = query(
+          collection(db, "extraHoursEntries"),
+          where("userId", "==", currentUser.id),
+          where("date", ">=", startDateString),
+          where("date", "<=", endDateString),
+          orderBy("date", "asc")
+        );
+        const querySnapshot = await getDocs(q);
+        const entries = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            // Convert Firestore Timestamp to JS Date for loggedAt if needed for display formatting
+            loggedAt: data.loggedAt instanceof Timestamp ? data.loggedAt.toDate() : data.loggedAt,
+          } as ExtraHoursEntry;
+        });
+        setExtraHoursLog(entries);
+      } catch (error) {
+        console.error("Error al obtener horas extra: ", error);
+        toast({
+          title: "Error al Cargar Horas",
+          description: "No se pudieron cargar las horas extras registradas.",
+          variant: "destructive",
+        });
+        setExtraHoursLog([]);
+      } finally {
+        setIsLoadingLog(false);
+      }
+    };
+
+    fetchExtraHoursLog();
+  }, [currentUser, selectedYear, selectedMonth, selectedQuincena, toast]);
+
+
   const handleLogExtraHours = async () => {
     if (!extraHoursDate || !extraHoursCount || !currentUser) {
-       toast({ title: "Error", description: "Por favor, completa la fecha y las horas.", variant: "destructive" });
-       return;
+      toast({ title: "Error", description: "Por favor, completa la fecha y las horas.", variant: "destructive" });
+      return;
     }
 
     const hours = parseFloat(String(extraHoursCount));
@@ -75,21 +153,56 @@ export default function DashboardPage() {
 
     setIsLoggingExtraHours(true);
     try {
-      const extraHoursData: Omit<ExtraHoursEntry, 'id'> = { // Omit 'id' as Firestore generates it
+      const extraHoursData: Omit<ExtraHoursEntry, 'id' | 'loggedAt'> & { loggedAt: any } = {
         userId: currentUser.id,
         date: extraHoursDate,
         hours: hours,
-        loggedAt: serverTimestamp(), // Firestore will set this to the server's time
+        notes: extraHoursNotes || '',
+        loggedAt: serverTimestamp(),
       };
 
       const docRef = await addDoc(collection(db, "extraHoursEntries"), extraHoursData);
-      
+
       toast({
         title: "Horas Extra Registradas",
-        description: `${hours} horas el ${format(new Date(extraHoursDate), 'dd/MM/yyyy')} para ${currentUser.name} fueron registradas con éxito (ID: ${docRef.id}).`,
+        description: `${hours} horas el ${format(new Date(extraHoursDate + 'T00:00:00'), 'dd/MM/yyyy', { locale: es })} fueron registradas con éxito.`,
       });
       setExtraHoursDate('');
       setExtraHoursCount('');
+      setExtraHoursNotes('');
+      // Refetch logs if the newly added entry falls into the currently selected period
+      const { startDateString, endDateString } = getPeriodDates(selectedYear, selectedMonth, selectedQuincena);
+      if (extraHoursData.date >= startDateString && extraHoursData.date <= endDateString) {
+         // Trigger refetch by slightly changing one of the dependencies or calling fetch directly
+         // For simplicity, we can rely on the next natural refetch or manually call it:
+         if (currentUser) { // Re-check currentUser as it's a dependency for fetchExtraHoursLog
+            const fetchExtraHoursLog = async () => { // Duplicated to avoid making it a top-level dependency
+              setIsLoadingLog(true);
+              try {
+                const q = query(
+                  collection(db, "extraHoursEntries"),
+                  where("userId", "==", currentUser.id),
+                  where("date", ">=", startDateString),
+                  where("date", "<=", endDateString),
+                  orderBy("date", "asc")
+                );
+                const querySnapshot = await getDocs(q);
+                const entries = querySnapshot.docs.map(doc => {
+                  const data = doc.data();
+                  return {
+                    id: doc.id,
+                    ...data,
+                    loggedAt: data.loggedAt instanceof Timestamp ? data.loggedAt.toDate() : data.loggedAt,
+                  } as ExtraHoursEntry;
+                });
+                setExtraHoursLog(entries);
+              } catch (error) { console.error("Error refetching logs", error); }
+              finally { setIsLoadingLog(false); }
+            };
+            fetchExtraHoursLog();
+         }
+      }
+
     } catch (error) {
       console.error("Error al registrar horas extra: ", error);
       toast({
@@ -102,34 +215,34 @@ export default function DashboardPage() {
     }
   };
 
-
   if (!currentUser) {
     return <div className="text-center p-8">Cargando datos del usuario...</div>;
   }
-  
-  const memoizedScheduleDisplay = useMemo(() => <ScheduleDisplay shifts={shifts} isLoading={isLoading} />, [shifts, isLoading]);
-  const memoizedAnalyticsDisplay = useMemo(() => <ShiftAnalyticsDisplay analytics={analytics} isLoading={isLoading} />, [analytics, isLoading]);
 
+  const memoizedScheduleDisplay = useMemo(() => <ScheduleDisplay shifts={shifts} isLoading={isLoadingSchedule} />, [shifts, isLoadingSchedule]);
+  const memoizedAnalyticsDisplay = useMemo(() => <ShiftAnalyticsDisplay analytics={analytics} isLoading={isLoadingSchedule} />, [analytics, isLoadingSchedule]);
+
+  const totalHoursForPeriod = extraHoursLog.reduce((sum, entry) => sum + entry.hours, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Panel Principal</h1>
         <p className="text-muted-foreground">
-          Visualiza tu horario, analiza tus días de trabajo y registra horas extra.
+          Visualiza tu horario, analiza tus días de trabajo y gestiona horas extra.
         </p>
       </div>
 
       <Card className="shadow-md">
         <CardHeader>
-          <CardTitle>Seleccionar Rango de Fechas</CardTitle>
-          <CardDescription>Elige el período para el cual deseas ver tu horario y análisis.</CardDescription>
+          <CardTitle>Seleccionar Rango de Fechas para Horario</CardTitle>
+          <CardDescription>Elige el período para el cual deseas ver tu horario y análisis de turnos.</CardDescription>
         </CardHeader>
         <CardContent>
           <DateRangePicker dateRange={dateRange} onDateRangeChange={setDateRange} />
         </CardContent>
       </Card>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 h-[600px] flex flex-col">
           {memoizedScheduleDisplay}
@@ -139,45 +252,155 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="extraHours" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 md:w-[250px]">
-          <TabsTrigger value="extraHours"><PlusCircle className="mr-2 h-4 w-4 inline-block" />Registrar Horas Extra</TabsTrigger>
-        </TabsList>
-        <TabsContent value="extraHours">
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle>Registrar Horas Extra</CardTitle>
-              <CardDescription>Registra cualquier hora extra trabajada.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label htmlFor="extra-hours-date" className="block text-sm font-medium mb-1">Fecha</label>
-                <Input
-                  id="extra-hours-date"
-                  type="date"
-                  value={extraHoursDate}
-                  onChange={(e) => setExtraHoursDate(e.target.value)}
-                  disabled={isLoggingExtraHours}
-                />
-              </div>
-              <div>
-                <label htmlFor="extra-hours-count" className="block text-sm font-medium mb-1">Horas</label>
-                <Input
-                  id="extra-hours-count"
-                  type="number"
-                  placeholder="ej., 4"
-                  value={extraHoursCount}
-                  onChange={(e) => setExtraHoursCount(e.target.value)} // Keep as string, parse on submit
-                  disabled={isLoggingExtraHours}
-                />
-              </div>
-              <Button onClick={handleLogExtraHours} className="w-full" disabled={isLoggingExtraHours}>
-                {isLoggingExtraHours ? "Registrando..." : <><PlusCircle className="h-4 w-4 mr-2" /> Registrar Horas</>}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <Card className="shadow-md">
+        <CardHeader>
+          <CardTitle>Registrar Horas Extra</CardTitle>
+          <CardDescription>Añade cualquier hora extra trabajada.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="extra-hours-date" className="block text-sm font-medium mb-1">Fecha</Label>
+            <Input
+              id="extra-hours-date"
+              type="date"
+              value={extraHoursDate}
+              onChange={(e) => setExtraHoursDate(e.target.value)}
+              disabled={isLoggingExtraHours}
+            />
+          </div>
+          <div>
+            <Label htmlFor="extra-hours-count" className="block text-sm font-medium mb-1">Horas</Label>
+            <Input
+              id="extra-hours-count"
+              type="number"
+              placeholder="ej., 4"
+              value={extraHoursCount}
+              onChange={(e) => setExtraHoursCount(e.target.value)}
+              disabled={isLoggingExtraHours}
+            />
+          </div>
+          <div>
+            <Label htmlFor="extra-hours-notes" className="block text-sm font-medium mb-1">Notas (Opcional)</Label>
+            <Input
+              id="extra-hours-notes"
+              type="text"
+              placeholder="Descripción breve"
+              value={extraHoursNotes}
+              onChange={(e) => setExtraHoursNotes(e.target.value)}
+              disabled={isLoggingExtraHours}
+            />
+          </div>
+          <Button onClick={handleLogExtraHours} className="w-full" disabled={isLoggingExtraHours}>
+            {isLoggingExtraHours ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Registrando...
+              </>
+            ) : (
+              <>
+                <PlusCircle className="h-4 w-4 mr-2" /> Registrar Horas
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-md">
+        <CardHeader>
+          <CardTitle>Historial de Horas Extra</CardTitle>
+          <CardDescription>Consulta tus horas extra registradas por quincena.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            <div>
+              <Label htmlFor="year-select">Año</Label>
+              <Select
+                value={String(selectedYear)}
+                onValueChange={(value) => setSelectedYear(Number(value))}
+              >
+                <SelectTrigger id="year-select">
+                  <SelectValue placeholder="Selecciona año" />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map(year => (
+                    <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="month-select">Mes</Label>
+              <Select
+                value={String(selectedMonth)}
+                onValueChange={(value) => setSelectedMonth(Number(value))}
+              >
+                <SelectTrigger id="month-select">
+                  <SelectValue placeholder="Selecciona mes" />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map(month => (
+                    <SelectItem key={month.value} value={String(month.value)}>{month.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="block mb-1">Quincena</Label>
+              <RadioGroup
+                value={selectedQuincena}
+                onValueChange={(value: 'first' | 'second') => setSelectedQuincena(value)}
+                className="flex space-x-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="first" id="q1" />
+                  <Label htmlFor="q1">1-15</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="second" id="q2" />
+                  <Label htmlFor="q2">16-Fin</Label>
+                </div>
+              </RadioGroup>
+            </div>
+          </div>
+
+          {isLoadingLog ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="ml-2">Cargando historial...</p>
+            </div>
+          ) : extraHoursLog.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <CalendarSearch className="h-12 w-12 mx-auto mb-2" />
+              No hay horas extras registradas para este período.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead className="text-right">Horas</TableHead>
+                    <TableHead>Notas</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {extraHoursLog.map((entry) => (
+                    <TableRow key={entry.id}>
+                      <TableCell>{format(new Date(entry.date + 'T00:00:00'), 'dd/MM/yyyy', { locale: es })}</TableCell>
+                      <TableCell className="text-right font-medium">{entry.hours}</TableCell>
+                      <TableCell>{entry.notes || '-'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                 <TableCaption className="mt-4 text-right text-lg font-semibold">
+                    Total Horas en el Período: {totalHoursForPeriod.toFixed(2)}
+                </TableCaption>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
