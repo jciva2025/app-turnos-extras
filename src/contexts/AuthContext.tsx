@@ -45,11 +45,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (member && member.loginKey === key) {
       setCurrentUser(member);
       localStorage.setItem('currentUser', JSON.stringify(member));
-      if (member.teamId === 'admin') {
-        router.push('/overview');
-      } else {
-        router.push('/dashboard');
-      }
+      // Todos los usuarios van al dashboard, la página del dashboard se adaptará si es admin.
+      router.push('/dashboard');
       return true;
     }
     return false;
@@ -75,3 +72,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

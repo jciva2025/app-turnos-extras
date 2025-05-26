@@ -9,8 +9,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { ScheduleDisplay } from '@/components/dashboard/ScheduleDisplay';
 import { ShiftAnalyticsDisplay } from '@/components/dashboard/ShiftAnalyticsDisplay';
-import type { Shift, ShiftAnalyticsData, ExtraHoursEntry } from '@/lib/types';
+import type { Shift, ShiftAnalyticsData, ExtraHoursEntry, TeamId } from '@/lib/types';
 import { getShiftsForDateRange, calculateShiftAnalytics } from '@/lib/schedule';
+import { TEAMS } from '@/lib/constants';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from "@/components/ui/table";
-import { PlusCircle, CalendarSearch, Loader2 } from 'lucide-react';
+import { PlusCircle, CalendarSearch, Loader2, Users } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
@@ -60,11 +61,30 @@ export default function DashboardPage() {
   const [extraHoursLog, setExtraHoursLog] = useState<ExtraHoursEntry[]>([]);
   const [isLoadingLog, setIsLoadingLog] = useState(false);
 
+  // For admin to select a team
+  const [adminSelectedTeamId, setAdminSelectedTeamId] = useState<TeamId | null>(null);
+
+  const isAdmin = useMemo(() => currentUser?.teamId === 'admin', [currentUser]);
+
   useEffect(() => {
-    if (currentUser && dateRange?.from && dateRange?.to) {
+    let memberIdToFetch: string | undefined = undefined;
+
+    if (isAdmin) {
+      if (adminSelectedTeamId) {
+        const teamMembers = TEAMS[adminSelectedTeamId]?.members;
+        if (teamMembers && teamMembers.length > 0) {
+          memberIdToFetch = teamMembers[0]; // Use first member of the team as representative
+        }
+      }
+    } else {
+      memberIdToFetch = currentUser?.id;
+    }
+
+    if (memberIdToFetch && dateRange?.from && dateRange?.to) {
       setIsLoadingSchedule(true);
+      // Simulate fetch delay
       setTimeout(() => {
-        const fetchedShifts = getShiftsForDateRange(currentUser.id, dateRange.from!, dateRange.to!);
+        const fetchedShifts = getShiftsForDateRange(memberIdToFetch!, dateRange.from!, dateRange.to!);
         setShifts(fetchedShifts);
         const calculatedAnalytics = calculateShiftAnalytics(fetchedShifts);
         setAnalytics(calculatedAnalytics);
@@ -74,7 +94,7 @@ export default function DashboardPage() {
       setShifts([]);
       setAnalytics(null);
     }
-  }, [currentUser, dateRange]);
+  }, [currentUser, dateRange, isAdmin, adminSelectedTeamId]);
 
   const getPeriodDates = useCallback((year: number, month: number, quincena: 'first' | 'second') => {
     const firstDayOfMonth = new Date(year, month, 1);
@@ -89,22 +109,19 @@ export default function DashboardPage() {
       endDate = lastDayOfMonth(firstDayOfMonth);
     }
     return {
-      startDate, // Return as Date object
-      endDate, // Return as Date object
+      startDate, 
+      endDate, 
       startDateString: format(startDate, 'yyyy-MM-dd'),
       endDateString: format(endDate, 'yyyy-MM-dd'),
     };
   }, []);
 
   const fetchExtraHoursLog = useCallback(async () => {
-    if (!currentUser) return;
+    if (!currentUser || isAdmin) return; // Admin does not see personal extra hours here
 
     setIsLoadingLog(true);
-    console.log("[DEBUG] Iniciando carga de horas extra...");
-    const { startDateString, endDateString, startDate, endDate } = getPeriodDates(selectedYear, selectedMonth, selectedQuincena);
+    const { startDateString, endDateString } = getPeriodDates(selectedYear, selectedMonth, selectedQuincena);
     
-    console.log(`[DEBUG] Periodo para consulta: User: ${currentUser.id}, Desde: ${startDateString}, Hasta: ${endDateString}`);
-
     try {
       const q = query(
         collection(db, "extraHoursEntries"),
@@ -114,11 +131,9 @@ export default function DashboardPage() {
         orderBy("date", "asc")
       );
       const querySnapshot = await getDocs(q);
-      console.log(`[DEBUG] Documentos encontrados: ${querySnapshot.docs.length}`);
       
       const entries = querySnapshot.docs.map(doc => {
         const data = doc.data();
-        console.log("[DEBUG] Documento individual:", doc.id, data);
         return {
           id: doc.id,
           ...data,
@@ -127,28 +142,28 @@ export default function DashboardPage() {
       });
       
       setExtraHoursLog(entries);
-      console.log("[DEBUG] Horas extra cargadas en estado:", entries);
-
     } catch (error) {
       console.error("Error al obtener horas extra: ", error);
       toast({
         title: "Error al Cargar Horas",
-        description: "No se pudieron cargar las horas extras registradas. Revisa la consola para más detalles.",
+        description: "No se pudieron cargar las horas extras registradas.",
         variant: "destructive",
       });
       setExtraHoursLog([]);
     } finally {
       setIsLoadingLog(false);
     }
-  }, [currentUser, selectedYear, selectedMonth, selectedQuincena, toast, getPeriodDates]);
+  }, [currentUser, selectedYear, selectedMonth, selectedQuincena, toast, getPeriodDates, isAdmin]);
 
   useEffect(() => {
-    fetchExtraHoursLog();
-  }, [fetchExtraHoursLog]);
+    if (!isAdmin) {
+      fetchExtraHoursLog();
+    }
+  }, [fetchExtraHoursLog, isAdmin]);
 
 
   const handleLogExtraHours = async () => {
-    if (!extraHoursDate || !extraHoursCount || !currentUser) {
+    if (isAdmin || !extraHoursDate || !extraHoursCount || !currentUser) {
       toast({ title: "Error", description: "Por favor, completa la fecha y las horas.", variant: "destructive" });
       return;
     }
@@ -163,14 +178,13 @@ export default function DashboardPage() {
     try {
       const extraHoursData: Omit<ExtraHoursEntry, 'id' | 'loggedAt'> & { loggedAt: any } = {
         userId: currentUser.id,
-        date: extraHoursDate, // This is "yyyy-MM-dd" string
+        date: extraHoursDate,
         hours: hours,
         notes: extraHoursNotes || '',
         loggedAt: serverTimestamp(),
       };
 
       const docRef = await addDoc(collection(db, "extraHoursEntries"), extraHoursData);
-      console.log("[DEBUG] Horas extra registradas con ID:", docRef.id, extraHoursData);
 
       toast({
         title: "Horas Extra Registradas",
@@ -180,11 +194,9 @@ export default function DashboardPage() {
       setExtraHoursCount('');
       setExtraHoursNotes('');
 
-      // Check if the newly added entry falls into the currently selected period and refetch
       const { startDateString: currentPeriodStart, endDateString: currentPeriodEnd } = getPeriodDates(selectedYear, selectedMonth, selectedQuincena);
       if (extraHoursData.date >= currentPeriodStart && extraHoursData.date <= currentPeriodEnd) {
-        console.log("[DEBUG] Nuevo registro está en el período actual. Re-cargando historial.");
-        fetchExtraHoursLog(); // Call the memoized fetch function
+        fetchExtraHoursLog();
       }
 
     } catch (error) {
@@ -207,183 +219,228 @@ export default function DashboardPage() {
   const memoizedAnalyticsDisplay = useMemo(() => <ShiftAnalyticsDisplay analytics={analytics} isLoading={isLoadingSchedule} />, [analytics, isLoadingSchedule]);
 
   const totalHoursForPeriod = extraHoursLog.reduce((sum, entry) => sum + entry.hours, 0);
+  
+  const pageTitle = isAdmin ? "Consulta de Horarios de Equipos" : "Panel Principal";
+  const pageDescription = isAdmin 
+    ? "Selecciona un equipo y un rango de fechas para ver su horario y análisis."
+    : "Visualiza tu horario, analiza tus días de trabajo y gestiona horas extra.";
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Panel Principal</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{pageTitle}</h1>
         <p className="text-muted-foreground">
-          Visualiza tu horario, analiza tus días de trabajo y gestiona horas extra.
+          {pageDescription}
         </p>
       </div>
+
+      {isAdmin && (
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle>Seleccionar Equipo</CardTitle>
+            <CardDescription>Elige el equipo que deseas consultar.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Select
+              onValueChange={(value: TeamId) => setAdminSelectedTeamId(value)}
+              value={adminSelectedTeamId || ""}
+            >
+              <SelectTrigger className="w-full sm:w-[280px]">
+                <SelectValue placeholder="Selecciona un equipo" />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(TEAMS) as TeamId[]).map(teamId => (
+                  <SelectItem key={teamId} value={teamId}>
+                    {TEAMS[teamId].name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="shadow-md">
         <CardHeader>
           <CardTitle>Seleccionar Rango de Fechas para Horario</CardTitle>
-          <CardDescription>Elige el período para el cual deseas ver tu horario y análisis de turnos.</CardDescription>
+          <CardDescription>Elige el período para el cual deseas ver el horario y análisis.</CardDescription>
         </CardHeader>
         <CardContent>
-          <DateRangePicker dateRange={dateRange} onDateRangeChange={setDateRange} />
+          <DateRangePicker dateRange={dateRange} onDateRangeChange={setDateRange} disabled={isAdmin && !adminSelectedTeamId} />
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 h-[600px] flex flex-col">
-          {memoizedScheduleDisplay}
+      { (!isAdmin || adminSelectedTeamId) && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 h-[600px] flex flex-col">
+            {memoizedScheduleDisplay}
+          </div>
+          <div className="space-y-6">
+            {memoizedAnalyticsDisplay}
+          </div>
         </div>
-        <div className="space-y-6">
-          {memoizedAnalyticsDisplay}
-        </div>
-      </div>
+      )}
+      { (isAdmin && !adminSelectedTeamId && !isLoadingSchedule) && (
+         <div className="text-center py-10 text-muted-foreground">
+            <Users className="h-12 w-12 mx-auto mb-2" />
+            <p className="text-lg font-medium">Por favor, selecciona un equipo para ver su horario.</p>
+          </div>
+      )}
 
-      <Card className="shadow-md">
-        <CardHeader>
-          <CardTitle>Registrar Horas Extra</CardTitle>
-          <CardDescription>Añade cualquier hora extra trabajada.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="extra-hours-date" className="block text-sm font-medium mb-1">Fecha</Label>
-            <Input
-              id="extra-hours-date"
-              type="date"
-              value={extraHoursDate}
-              onChange={(e) => setExtraHoursDate(e.target.value)}
-              disabled={isLoggingExtraHours}
-            />
-          </div>
-          <div>
-            <Label htmlFor="extra-hours-count" className="block text-sm font-medium mb-1">Horas</Label>
-            <Input
-              id="extra-hours-count"
-              type="number"
-              placeholder="ej., 4"
-              value={extraHoursCount}
-              onChange={(e) => setExtraHoursCount(e.target.value)}
-              disabled={isLoggingExtraHours}
-            />
-          </div>
-          <div>
-            <Label htmlFor="extra-hours-notes" className="block text-sm font-medium mb-1">Notas (Opcional)</Label>
-            <Input
-              id="extra-hours-notes"
-              type="text"
-              placeholder="Descripción breve"
-              value={extraHoursNotes}
-              onChange={(e) => setExtraHoursNotes(e.target.value)}
-              disabled={isLoggingExtraHours}
-            />
-          </div>
-          <Button onClick={handleLogExtraHours} className="w-full" disabled={isLoggingExtraHours}>
-            {isLoggingExtraHours ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Registrando...
-              </>
-            ) : (
-              <>
-                <PlusCircle className="h-4 w-4 mr-2" /> Registrar Horas
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
 
-      <Card className="shadow-md">
-        <CardHeader>
-          <CardTitle>Historial de Horas Extra</CardTitle>
-          <CardDescription>Consulta tus horas extra registradas por quincena.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-            <div>
-              <Label htmlFor="year-select">Año</Label>
-              <Select
-                value={String(selectedYear)}
-                onValueChange={(value) => setSelectedYear(Number(value))}
-              >
-                <SelectTrigger id="year-select">
-                  <SelectValue placeholder="Selecciona año" />
-                </SelectTrigger>
-                <SelectContent>
-                  {years.map(year => (
-                    <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="month-select">Mes</Label>
-              <Select
-                value={String(selectedMonth)}
-                onValueChange={(value) => setSelectedMonth(Number(value))}
-              >
-                <SelectTrigger id="month-select">
-                  <SelectValue placeholder="Selecciona mes" />
-                </SelectTrigger>
-                <SelectContent>
-                  {months.map(month => (
-                    <SelectItem key={month.value} value={String(month.value)}>{month.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="block mb-1">Quincena</Label>
-              <RadioGroup
-                value={selectedQuincena}
-                onValueChange={(value: 'first' | 'second') => setSelectedQuincena(value)}
-                className="flex space-x-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="first" id="q1" />
-                  <Label htmlFor="q1">1-15</Label>
+      {!isAdmin && (
+        <>
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle>Registrar Horas Extra</CardTitle>
+              <CardDescription>Añade cualquier hora extra trabajada.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="extra-hours-date" className="block text-sm font-medium mb-1">Fecha</Label>
+                <Input
+                  id="extra-hours-date"
+                  type="date"
+                  value={extraHoursDate}
+                  onChange={(e) => setExtraHoursDate(e.target.value)}
+                  disabled={isLoggingExtraHours}
+                />
+              </div>
+              <div>
+                <Label htmlFor="extra-hours-count" className="block text-sm font-medium mb-1">Horas</Label>
+                <Input
+                  id="extra-hours-count"
+                  type="number"
+                  placeholder="ej., 4"
+                  value={extraHoursCount}
+                  onChange={(e) => setExtraHoursCount(e.target.value)}
+                  disabled={isLoggingExtraHours}
+                />
+              </div>
+              <div>
+                <Label htmlFor="extra-hours-notes" className="block text-sm font-medium mb-1">Notas (Opcional)</Label>
+                <Input
+                  id="extra-hours-notes"
+                  type="text"
+                  placeholder="Descripción breve"
+                  value={extraHoursNotes}
+                  onChange={(e) => setExtraHoursNotes(e.target.value)}
+                  disabled={isLoggingExtraHours}
+                />
+              </div>
+              <Button onClick={handleLogExtraHours} className="w-full" disabled={isLoggingExtraHours}>
+                {isLoggingExtraHours ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Registrando...
+                  </>
+                ) : (
+                  <>
+                    <PlusCircle className="h-4 w-4 mr-2" /> Registrar Horas
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle>Historial de Horas Extra</CardTitle>
+              <CardDescription>Consulta tus horas extra registradas por quincena.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                <div>
+                  <Label htmlFor="year-select">Año</Label>
+                  <Select
+                    value={String(selectedYear)}
+                    onValueChange={(value) => setSelectedYear(Number(value))}
+                  >
+                    <SelectTrigger id="year-select">
+                      <SelectValue placeholder="Selecciona año" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {years.map(year => (
+                        <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="second" id="q2" />
-                  <Label htmlFor="q2">16-Fin</Label>
+                <div>
+                  <Label htmlFor="month-select">Mes</Label>
+                  <Select
+                    value={String(selectedMonth)}
+                    onValueChange={(value) => setSelectedMonth(Number(value))}
+                  >
+                    <SelectTrigger id="month-select">
+                      <SelectValue placeholder="Selecciona mes" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {months.map(month => (
+                        <SelectItem key={month.value} value={String(month.value)}>{month.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </RadioGroup>
-            </div>
-          </div>
+                <div>
+                  <Label className="block mb-1">Quincena</Label>
+                  <RadioGroup
+                    value={selectedQuincena}
+                    onValueChange={(value: 'first' | 'second') => setSelectedQuincena(value)}
+                    className="flex space-x-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="first" id="q1" />
+                      <Label htmlFor="q1">1-15</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="second" id="q2" />
+                      <Label htmlFor="q2">16-Fin</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              </div>
 
-          {isLoadingLog ? (
-            <div className="flex justify-center items-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="ml-2">Cargando historial...</p>
-            </div>
-          ) : extraHoursLog.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <CalendarSearch className="h-12 w-12 mx-auto mb-2" />
-              No hay horas extras registradas para este período.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead className="text-right">Horas</TableHead>
-                    <TableHead>Notas</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {extraHoursLog.map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell>{format(new Date(entry.date + 'T00:00:00'), 'dd/MM/yyyy', { locale: es })}</TableCell>
-                      <TableCell className="text-right font-medium">{entry.hours}</TableCell>
-                      <TableCell>{entry.notes || '-'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-                 <TableCaption className="mt-4 text-right text-lg font-semibold">
-                    Total Horas en el Período: {totalHoursForPeriod.toFixed(2)}
-                </TableCaption>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              {isLoadingLog ? (
+                <div className="flex justify-center items-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="ml-2">Cargando historial...</p>
+                </div>
+              ) : extraHoursLog.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <CalendarSearch className="h-12 w-12 mx-auto mb-2" />
+                  No hay horas extras registradas para este período.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead className="text-right">Horas</TableHead>
+                        <TableHead>Notas</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {extraHoursLog.map((entry) => (
+                        <TableRow key={entry.id}>
+                          <TableCell>{format(new Date(entry.date + 'T00:00:00'), 'dd/MM/yyyy', { locale: es })}</TableCell>
+                          <TableCell className="text-right font-medium">{entry.hours}</TableCell>
+                          <TableCell>{entry.notes || '-'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                    <TableCaption className="mt-4 text-right text-lg font-semibold">
+                        Total Horas en el Período: {totalHoursForPeriod.toFixed(2)}
+                    </TableCaption>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
+
