@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -8,7 +9,6 @@ import { AppLogo } from '@/components/common/AppLogo';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { User } from 'lucide-react';
 
 export default function HomePage() {
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
