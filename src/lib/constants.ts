@@ -10,6 +10,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
   { id: 'juan_b', name: 'Juan Bilbao', teamId: 'team_c', loginKey: 'jb123', photoUrl: '/juan_b.png' },
   { id: 'andres_f', name: 'Andres Flores', teamId: 'team_d', loginKey: 'af123', photoUrl: '/andres_f.png' },
   { id: 'matias_v', name: 'Matias Vilela', teamId: 'team_d', loginKey: 'mv123', photoUrl: '/matias_v.png' },
+  { id: 'admin_viewer', name: 'Admin General', teamId: 'admin', loginKey: 'admin123', photoUrl: '/admin_avatar.png' },
 ];
 
 export const TEAMS: Record<TeamId, Team> = {

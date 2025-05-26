@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -44,6 +45,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (member && member.loginKey === key) {
       setCurrentUser(member);
       localStorage.setItem('currentUser', JSON.stringify(member));
+      if (member.teamId === 'admin') {
+        router.push('/overview');
+      } else {
+        router.push('/dashboard');
+      }
       return true;
     }
     return false;

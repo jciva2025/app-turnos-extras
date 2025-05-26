@@ -27,7 +27,7 @@ export default function HomePage() {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
-        timeZone: 'America/Argentina/San_Luis',
+        timeZone: 'America/Argentina/San_Luis', // Asegúrate que esta zona horaria es la correcta
         hour12: false,
       };
       setCurrentDateTime(new Intl.DateTimeFormat('es-AR', options).format(now));
@@ -87,7 +87,7 @@ export default function HomePage() {
         </CardHeader>
         <CardContent>
           <p className="text-center text-muted-foreground mb-8">
-            Haz clic en tu nombre para iniciar sesión y ver tu horario de trabajo.
+            Haz clic en tu nombre para iniciar sesión y ver tu horario de trabajo o la vista general.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {TEAM_MEMBERS.map((member) => (
@@ -103,7 +103,7 @@ export default function HomePage() {
                   width={64}
                   height={64}
                   className="rounded-full mb-2"
-                  data-ai-hint="person portrait"
+                  data-ai-hint={member.teamId === 'admin' ? 'person silhouette' : 'person portrait'}
                 />
                 <span className="text-center text-sm font-medium">{member.name}</span>
               </Button>
