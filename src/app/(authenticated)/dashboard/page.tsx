@@ -5,14 +5,14 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { format, startOfMonth, endOfMonth, getYear, getMonth, setDate, getDate, lastDayOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
-import Image from 'next/image';
+import Image from 'next/image'; // Kept for login page, not directly used here but good to keep consistent
 import { useAuth } from '@/contexts/AuthContext';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { ScheduleDisplay } from '@/components/dashboard/ScheduleDisplay';
 import { ShiftAnalyticsDisplay } from '@/components/dashboard/ShiftAnalyticsDisplay';
 import type { Shift, ShiftAnalyticsData, ExtraHoursEntry, TeamId, TeamMember } from '@/lib/types';
-import { getShiftsForDateRange, calculateShiftAnalytics } from '@/lib/schedule';
-import { TEAMS, TEAM_MEMBERS } from '@/lib/constants';
+import { getShiftsForDateRange, calculateShiftAnalytics, getTeamForMember } from '@/lib/schedule';
+import { TEAMS, TEAM_MEMBERS } from '@/lib/constants'; // Ensure TEAM_MEMBERS is imported
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { PlusCircle, CalendarSearch, Loader2, Users, User } from 'lucide-react';
+import { PlusCircle, CalendarSearch, Loader2, Users } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
@@ -55,6 +55,7 @@ export default function DashboardPage() {
   const [extraHoursCount, setExtraHoursCount] = useState<number | string>('');
   const [extraHoursNotes, setExtraHoursNotes] = useState<string>('');
 
+
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [selectedMonth, setSelectedMonth] = useState<number>(getMonth(new Date()));
   const [selectedQuincena, setSelectedQuincena] = useState<'first' | 'second'>(
@@ -66,20 +67,22 @@ export default function DashboardPage() {
   const [adminSelectedTeamId, setAdminSelectedTeamId] = useState<TeamId | null>(null);
   const [selectedTeamMembers, setSelectedTeamMembers] = useState<TeamMember[]>([]);
 
+
   const isAdmin = useMemo(() => currentUser?.teamId === 'admin', [currentUser]);
 
   useEffect(() => {
     let memberIdToFetch: string | undefined = undefined;
-    setSelectedTeamMembers([]);
+    setSelectedTeamMembers([]); // Reset selected team members
 
     if (isAdmin) {
       if (adminSelectedTeamId) {
         const teamDetails = TEAMS[adminSelectedTeamId];
         if (teamDetails && teamDetails.members.length > 0) {
           memberIdToFetch = teamDetails.members[0]; // Use first member of the team as representative for schedule fetching
+          // Populate selectedTeamMembers for display
           const members = teamDetails.members
             .map(id => TEAM_MEMBERS.find(m => m.id === id))
-            .filter(Boolean) as TeamMember[];
+            .filter(Boolean) as TeamMember[]; // Filter out undefined if a member ID is not found
           setSelectedTeamMembers(members);
         }
       }
@@ -89,6 +92,7 @@ export default function DashboardPage() {
 
     if (memberIdToFetch && dateRange?.from && dateRange?.to) {
       setIsLoadingSchedule(true);
+      // Simulate API call
       setTimeout(() => {
         const fetchedShifts = getShiftsForDateRange(memberIdToFetch!, dateRange.from!, dateRange.to!);
         setShifts(fetchedShifts);
@@ -100,10 +104,19 @@ export default function DashboardPage() {
       setShifts([]);
       setAnalytics(null);
       if (isAdmin && !adminSelectedTeamId) { // Clear schedule if admin deselects team or no team selected
-        setIsLoadingSchedule(false);
+         setIsLoadingSchedule(false);
       }
     }
   }, [currentUser, dateRange, isAdmin, adminSelectedTeamId]);
+  
+  const getInitials = (name: string) => {
+    const names = name.split(' ');
+    if (names.length > 1) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return names[0].substring(0, 2).toUpperCase();
+  };
+
 
   const getPeriodDates = useCallback((year: number, month: number, quincena: 'first' | 'second') => {
     const firstDayOfMonth = new Date(year, month, 1);
@@ -118,18 +131,22 @@ export default function DashboardPage() {
       endDate = lastDayOfMonth(firstDayOfMonth);
     }
     return {
-      startDate,
-      endDate,
+      startDate, // JS Date object
+      endDate, // JS Date object
       startDateString: format(startDate, 'yyyy-MM-dd'),
       endDateString: format(endDate, 'yyyy-MM-dd'),
     };
   }, []);
 
+
   const fetchExtraHoursLog = useCallback(async () => {
-    if (!currentUser || isAdmin) return;
+    if (!currentUser || isAdmin) return; // Do not fetch for admin
 
     setIsLoadingLog(true);
     const { startDateString, endDateString } = getPeriodDates(selectedYear, selectedMonth, selectedQuincena);
+    
+    console.log(`[DEBUG] Iniciando carga de horas extra...`);
+    console.log(`[DEBUG] Periodo para consulta: User: ${currentUser.id}, Desde: ${startDateString}, Hasta: ${endDateString}`);
 
     try {
       const q = query(
@@ -140,9 +157,11 @@ export default function DashboardPage() {
         orderBy("date", "asc")
       );
       const querySnapshot = await getDocs(q);
+      console.log(`[DEBUG] Documentos encontrados: ${querySnapshot.docs.length}`);
 
       const entries = querySnapshot.docs.map(doc => {
         const data = doc.data();
+        console.log(`[DEBUG] Documento individual: ${doc.id}`, data);
         return {
           id: doc.id,
           ...data,
@@ -151,6 +170,7 @@ export default function DashboardPage() {
       });
 
       setExtraHoursLog(entries);
+      console.log(`[DEBUG] Horas extra cargadas en estado:`, entries);
     } catch (error) {
       console.error("Error al obtener horas extra: ", error);
       toast({
@@ -165,14 +185,14 @@ export default function DashboardPage() {
   }, [currentUser, selectedYear, selectedMonth, selectedQuincena, toast, getPeriodDates, isAdmin]);
 
   useEffect(() => {
-    if (!isAdmin) {
-      fetchExtraHoursLog();
+    if (!isAdmin) { // Only non-admin users fetch their personal extra hours
+        fetchExtraHoursLog();
     }
   }, [fetchExtraHoursLog, isAdmin]);
 
 
   const handleLogExtraHours = async () => {
-    if (isAdmin || !extraHoursDate || !extraHoursCount || !currentUser) {
+    if (isAdmin || !extraHoursDate || !extraHoursCount || !currentUser) { // Admin cannot log hours
       toast({ title: "Error", description: "Por favor, completa la fecha y las horas.", variant: "destructive" });
       return;
     }
@@ -185,27 +205,29 @@ export default function DashboardPage() {
 
     setIsLoggingExtraHours(true);
     try {
-      const extraHoursData: Omit<ExtraHoursEntry, 'id' | 'loggedAt'> & { loggedAt: any } = {
+      const newEntryRef = collection(db, "extraHoursEntries");
+      const extraHoursData: Omit<ExtraHoursEntry, 'id' | 'loggedAt'> & { loggedAt: any } = { // Use any for serverTimestamp
         userId: currentUser.id,
         date: extraHoursDate,
         hours: hours,
         notes: extraHoursNotes || '',
-        loggedAt: serverTimestamp(),
+        loggedAt: serverTimestamp(), // Use Firebase server timestamp
       };
 
-      await addDoc(collection(db, "extraHoursEntries"), extraHoursData);
+      const docRef = await addDoc(newEntryRef, extraHoursData);
 
       toast({
         title: "Horas Extra Registradas",
-        description: `${hours} horas el ${format(new Date(extraHoursDate + 'T00:00:00'), 'dd/MM/yyyy', { locale: es })} fueron registradas con éxito.`,
+        description: `${hours} horas el ${format(new Date(extraHoursDate + 'T00:00:00'), 'dd/MM/yyyy', { locale: es })} fueron registradas con éxito. (ID: ${docRef.id})`,
       });
       setExtraHoursDate('');
       setExtraHoursCount('');
       setExtraHoursNotes('');
 
+      // Check if the logged date falls within the currently displayed period for the log
       const { startDateString: currentPeriodStart, endDateString: currentPeriodEnd } = getPeriodDates(selectedYear, selectedMonth, selectedQuincena);
       if (extraHoursData.date >= currentPeriodStart && extraHoursData.date <= currentPeriodEnd) {
-        fetchExtraHoursLog();
+        fetchExtraHoursLog(); // Re-fetch to update the list
       }
 
     } catch (error) {
@@ -223,22 +245,14 @@ export default function DashboardPage() {
   if (!currentUser) {
     return <div className="text-center p-8">Cargando datos del usuario...</div>;
   }
-  
-  const getInitials = (name: string) => {
-    const names = name.split(' ');
-    if (names.length > 1) {
-      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
-    }
-    return names[0].substring(0, 2).toUpperCase();
-  };
 
   const memoizedScheduleDisplay = useMemo(() => <ScheduleDisplay shifts={shifts} isLoading={isLoadingSchedule} />, [shifts, isLoadingSchedule]);
   const memoizedAnalyticsDisplay = useMemo(() => <ShiftAnalyticsDisplay analytics={analytics} isLoading={isLoadingSchedule} />, [analytics, isLoadingSchedule]);
 
   const totalHoursForPeriod = extraHoursLog.reduce((sum, entry) => sum + entry.hours, 0);
-
+  
   const pageTitle = isAdmin ? "Consulta de Horarios de Equipos" : "Panel Principal";
-  const pageDescription = isAdmin
+  const pageDescription = isAdmin 
     ? "Selecciona un equipo y un rango de fechas para ver su horario y análisis."
     : "Visualiza tu horario, analiza tus días de trabajo y gestiona horas extra.";
 
@@ -314,10 +328,10 @@ export default function DashboardPage() {
         </div>
       )}
       {(isAdmin && !adminSelectedTeamId && !isLoadingSchedule) && (
-        <div className="text-center py-10 text-muted-foreground">
-          <Users className="h-12 w-12 mx-auto mb-2" />
-          <p className="text-lg font-medium">Por favor, selecciona un equipo para ver su horario.</p>
-        </div>
+         <div className="text-center py-10 text-muted-foreground">
+            <Users className="h-12 w-12 mx-auto mb-2" />
+            <p className="text-lg font-medium">Por favor, selecciona un equipo para ver su horario.</p>
+         </div>
       )}
 
       {!isAdmin && (
@@ -452,27 +466,27 @@ export default function DashboardPage() {
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Fecha</TableHead>
-                            <TableHead className="text-right">Horas</TableHead>
-                            <TableHead>Notas</TableHead>
+                    <Table>
+                      <TableCaption className="mt-4 text-right text-lg font-semibold">
+                        Total Horas en el Período: {totalHoursForPeriod.toFixed(2)}
+                      </TableCaption>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Fecha</TableHead>
+                          <TableHead className="text-right">Horas</TableHead>
+                          <TableHead>Notas</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {extraHoursLog.map((entry) => (
+                          <TableRow key={entry.id}>
+                            <TableCell>{format(new Date(entry.date + 'T00:00:00'), 'dd/MM/yyyy', { locale: es })}</TableCell>
+                            <TableCell className="text-right font-medium">{entry.hours}</TableCell>
+                            <TableCell>{entry.notes || '-'}</TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {extraHoursLog.map((entry) => (
-                            <TableRow key={entry.id}>
-                              <TableCell>{format(new Date(entry.date + 'T00:00:00'), 'dd/MM/yyyy', { locale: es })}</TableCell>
-                              <TableCell className="text-right font-medium">{entry.hours}</TableCell>
-                              <TableCell>{entry.notes || '-'}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                        <TableCaption className="mt-4 text-right text-lg font-semibold">
-                          Total Horas en el Período: {totalHoursForPeriod.toFixed(2)}
-                        </TableCaption>
-                      </Table>
+                        ))}
+                      </TableBody>
+                    </Table>
                     </div>
                   )}
                 </CardContent>
@@ -484,3 +498,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
