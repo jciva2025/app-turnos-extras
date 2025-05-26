@@ -25,12 +25,20 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-background to-secondary/30">
-      <header className="mb-12">
+    <div
+      className="min-h-screen flex flex-col items-center justify-center p-4 bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: "url('https://placehold.co/1920x1080.png')" }}
+      data-ai-hint="industrial factory"
+    >
+      {/* Optional: Add an overlay for better text readability if needed 
+      <div className="absolute inset-0 bg-black/50 z-0"></div> 
+      Ensure content below has a higher z-index if using an overlay like this.
+      */}
+      <header className="mb-12 z-10">
         <AppLogo size="lg" />
       </header>
 
-      <Card className="w-full max-w-2xl shadow-xl">
+      <Card className="w-full max-w-2xl shadow-xl z-10">
         <CardHeader>
           <CardTitle className="text-center text-3xl font-semibold text-primary">Selecciona Tu Perfil</CardTitle>
         </CardHeader>
@@ -43,7 +51,7 @@ export default function HomePage() {
               <Button
                 key={member.id}
                 variant="outline"
-                className="flex flex-col items-center justify-center p-4 h-auto aspect-square transform transition-all duration-150 hover:scale-105 hover:shadow-lg focus:ring-2 focus:ring-primary"
+                className="flex flex-col items-center justify-center p-4 h-auto aspect-square transform transition-all duration-150 hover:scale-105 hover:shadow-lg focus:ring-2 focus:ring-primary bg-card/80 backdrop-blur-sm" // Added bg-card/80 and backdrop-blur for better visibility on image
                 onClick={() => handleMemberSelect(member)}
               >
                 <Image
@@ -68,7 +76,7 @@ export default function HomePage() {
           onClose={closeModal}
         />
       )}
-      <footer className="mt-12 text-center text-muted-foreground text-sm">
+      <footer className="mt-12 text-center text-muted-foreground text-sm z-10 bg-background/70 backdrop-blur-sm p-2 rounded">
         <p>&copy; {new Date().getFullYear()} Cuarto turno mtto. Mecanizado. Todos los derechos reservados.</p>
       </footer>
     </div>
