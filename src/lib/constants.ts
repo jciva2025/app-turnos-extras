@@ -19,9 +19,9 @@ export const TEAMS: Record<TeamId, Team> = {
   team_d: { id: 'team_d', name: 'Turno D', members: ['andres_f', 'matias_v'] },
 };
 
-// Fecha de referencia: 27 de Mayo de 2024.
-// En esta fecha, team_c trabaja de día y team_d de noche, iniciando el ciclo.
-export const REFERENCE_DATE = new Date(2024, 4, 27); // May 27, 2024 (month is 0-indexed)
+// Fecha de referencia: 21 de Febrero de 2024.
+// En esta fecha, team_c trabaja de día y team_d de noche, iniciando el ciclo 3-2-2-3.
+export const REFERENCE_DATE = new Date(2024, 1, 21); // February 21, 2024 (month is 0-indexed, 1 = February)
 export const CYCLE_LENGTH = 20; // days
 
 // Patrón de turnos basado en la descripción del usuario:
@@ -85,3 +85,4 @@ export const ARGENTINA_HOLIDAYS: Holiday[] = [
   { date: "2024-12-08", name: "Inmaculada Concepción de María" },
   { date: "2024-12-25", name: "Navidad" },
 ];
+
