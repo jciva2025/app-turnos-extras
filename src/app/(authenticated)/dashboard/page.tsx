@@ -5,23 +5,21 @@ import { useState, useEffect, useMemo } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { addDays, startOfMonth, endOfMonth } from 'date-fns'; // Removed subMonths as it's not used
+import { startOfMonth, endOfMonth } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { ScheduleDisplay } from '@/components/dashboard/ScheduleDisplay';
 import { ShiftAnalyticsDisplay } from '@/components/dashboard/ShiftAnalyticsDisplay';
-import type { Shift, ShiftAnalyticsData, ChatMessage } from '@/lib/types'; // Added ChatMessage
+import type { Shift, ShiftAnalyticsData } from '@/lib/types';
 import { getShiftsForDateRange, calculateShiftAnalytics } from '@/lib/schedule';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-// import { Textarea } from '@/components/ui/textarea'; // Textarea not used for chat message
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, PlusCircle } from 'lucide-react'; // Removed Edit3
+import { PlusCircle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { db } from '@/lib/firebase'; // Firebase db instance
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, Timestamp } from 'firebase/firestore'; // Firestore functions
+// Firebase db instance might be used for extra hours in the future, so db import is kept.
+// import { db } from '@/lib/firebase'; 
 
 
 export default function DashboardPage() {
@@ -39,10 +37,6 @@ export default function DashboardPage() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [analytics, setAnalytics] = useState<ShiftAnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Chat states
-  const [chatMessage, setChatMessage] = useState('');
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]); // Updated to use ChatMessage type from types.ts
 
   // Extra hours states
   const [extraHoursDate, setExtraHoursDate] = useState<string>('');
@@ -65,54 +59,7 @@ export default function DashboardPage() {
       setAnalytics(null);
     }
   }, [currentUser, dateRange]);
-
-  // Firestore listener for chat messages
-  useEffect(() => {
-    if (!currentUser) return;
-
-    // Query to get messages, ordered by timestamp
-    const q = query(collection(db, "messages"), orderBy("timestamp", "asc"));
-    
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const messages: ChatMessage[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        messages.push({
-          id: doc.id,
-          userId: data.userId,
-          userName: data.userName,
-          text: data.text,
-          timestamp: data.timestamp as Timestamp | null, // Firestore timestamp
-        });
-      });
-      setChatMessages(messages);
-    }, (error) => {
-      console.error("Error fetching messages: ", error);
-      toast({ title: "Error de Chat", description: "No se pudieron cargar los mensajes.", variant: "destructive" });
-    });
-
-    // Cleanup subscription on unmount
-    return () => unsubscribe();
-  }, [currentUser, toast]);
   
-  const handleSendChatMessage = async () => {
-    if (chatMessage.trim() && currentUser) {
-      try {
-        await addDoc(collection(db, "messages"), {
-          userId: currentUser.id,
-          userName: currentUser.name,
-          text: chatMessage.trim(),
-          timestamp: serverTimestamp() // Firestore server timestamp
-        });
-        setChatMessage('');
-        // No need for success toast here, message will appear in chat via listener
-      } catch (error) {
-        console.error("Error sending message: ", error);
-        toast({ title: "Error al Enviar", description: "No se pudo enviar tu mensaje.", variant: "destructive" });
-      }
-    }
-  };
-
   const handleLogExtraHours = () => {
     if (extraHoursDate && extraHoursCount && currentUser) {
       // This would typically send to Firebase
@@ -141,7 +88,7 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Panel Principal</h1>
         <p className="text-muted-foreground">
-          Visualiza tu horario, analiza tus días de trabajo, chatea con tu equipo y registra horas extra.
+          Visualiza tu horario, analiza tus días de trabajo y registra horas extra.
         </p>
       </div>
 
@@ -164,46 +111,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="chat" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
-          <TabsTrigger value="chat"><Send className="mr-2 h-4 w-4 inline-block" />Chat de Equipo</TabsTrigger>
+      <Tabs defaultValue="extraHours" className="w-full">
+        <TabsList className="grid w-full grid-cols-1 md:w-[250px]">
           <TabsTrigger value="extraHours"><PlusCircle className="mr-2 h-4 w-4 inline-block" />Registrar Horas Extra</TabsTrigger>
         </TabsList>
-        <TabsContent value="chat">
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle>Chat de Equipo</CardTitle>
-              <CardDescription>Comunícate con los miembros de tu equipo.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ScrollArea className="h-64 w-full rounded-md border p-4 bg-muted/20">
-                {chatMessages.length === 0 && <p className="text-muted-foreground text-sm text-center">Aún no hay mensajes. ¡Inicia una conversación!</p>}
-                {chatMessages.map((msg) => (
-                  <div key={msg.id} className={`mb-2 p-2 rounded-lg ${msg.userId === currentUser.id ? 'bg-primary/10 text-primary-foreground items-end flex flex-col' : 'bg-secondary/20'}`}>
-                    <p className={`text-xs ${msg.userId === currentUser.id ? 'text-primary/80' : 'text-muted-foreground'}`}>
-                      <strong>{msg.userId === currentUser.id ? 'Tú' : msg.userName}</strong>
-                      <span className="text-xs opacity-70 ml-1">
-                        {msg.timestamp ? format(msg.timestamp.toDate(), 'p', { locale: es }) : 'Enviando...'}
-                      </span>
-                    </p>
-                    <p className="text-sm">{msg.text}</p>
-                  </div>
-                ))}
-              </ScrollArea>
-              <div className="flex space-x-2">
-                <Input
-                  type="text"
-                  placeholder="Escribe tu mensaje..."
-                  value={chatMessage}
-                  onChange={(e) => setChatMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendChatMessage()}
-                />
-                <Button onClick={handleSendChatMessage}><Send className="h-4 w-4 mr-2" /> Enviar</Button>
-              </div>
-              <p className="text-xs text-muted-foreground text-center pt-2">Nota: El chat utiliza Firebase Firestore. Asegúrate de haber configurado tu proyecto Firebase y sus reglas de seguridad.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
         <TabsContent value="extraHours">
           <Card className="shadow-md">
             <CardHeader>
@@ -231,7 +142,7 @@ export default function DashboardPage() {
                 />
               </div>
               <Button onClick={handleLogExtraHours} className="w-full"><PlusCircle className="h-4 w-4 mr-2" /> Registrar Horas</Button>
-              <p className="text-xs text-muted-foreground text-center pt-2">Nota: El registro de horas extra es simulado y requiere un backend de Firebase para persistencia.</p>
+              <p className="text-xs text-muted-foreground text-center pt-2">Nota: El registro de horas extra es simulado y requiere un backend (como Firebase) para persistencia.</p>
             </CardContent>
           </Card>
         </TabsContent>

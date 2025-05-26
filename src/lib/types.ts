@@ -1,5 +1,4 @@
 
-import type { Timestamp } from 'firebase/firestore';
 
 export interface TeamMember {
   id: string;
@@ -58,13 +57,7 @@ export interface ShiftAnalyticsData {
   totalWorkDays: number;
 }
 
-export interface ChatMessage {
-  id: string; // Firestore document ID
-  userId: string;
-  userName: string;
-  text: string;
-  timestamp: Timestamp | null; // Firestore Timestamp
-}
+// ChatMessage interface removed
 
 export interface ExtraHoursEntry {
   id: string;
