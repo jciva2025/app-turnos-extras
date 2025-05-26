@@ -96,7 +96,7 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
        <footer className="py-6 md:px-8 md:py-0 border-t bg-card">
         <div className="container flex flex-col items-center justify-between gap-4 md:h-20 md:flex-row">
           <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
-            &copy; {new Date().getFullYear()} ShiftWise. Desarrollado con Next.js y ShadCN UI.
+            &copy; {new Date().getFullYear()} Cuarto turno mtto. Mecanizado. Desarrollado con Next.js y ShadCN UI.
           </p>
         </div>
       </footer>

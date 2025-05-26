@@ -69,7 +69,7 @@ export default function HomePage() {
         />
       )}
       <footer className="mt-12 text-center text-muted-foreground text-sm">
-        <p>&copy; {new Date().getFullYear()} ShiftWise. Todos los derechos reservados.</p>
+        <p>&copy; {new Date().getFullYear()} Cuarto turno mtto. Mecanizado. Todos los derechos reservados.</p>
       </footer>
     </div>
   );

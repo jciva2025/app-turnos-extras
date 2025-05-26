@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'ShiftWise',
+  title: 'Cuarto turno mtto. Mecanizado.',
   description: 'Aplicación de gestión y programación de turnos para equipos.',
 };
 

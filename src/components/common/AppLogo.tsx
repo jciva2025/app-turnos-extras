@@ -7,7 +7,7 @@ export function AppLogo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   return (
     <div className="flex items-center space-x-2 text-primary">
       <Briefcase className={`h-${iconSize} w-${iconSize}`} />
-      <h1 className={`font-bold ${textSizeClass}`}>ShiftWise</h1>
+      <h1 className={`font-bold ${textSizeClass}`}>Cuarto turno mtto. Mecanizado.</h1>
     </div>
   );
 }
