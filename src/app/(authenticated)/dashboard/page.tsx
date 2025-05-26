@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { DateRange } from 'react-day-picker';
 import { format, startOfMonth, endOfMonth, getYear, getMonth, setDate, getDate, lastDayOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -25,7 +25,7 @@ import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
 
 const currentYear = getYear(new Date());
-const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i); // Current year +/- 2 years
+const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
 const months = Array.from({ length: 12 }, (_, i) => ({
   value: i,
   label: format(new Date(currentYear, i), 'MMMM', { locale: es }),
@@ -48,12 +48,10 @@ export default function DashboardPage() {
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
   const [isLoggingExtraHours, setIsLoggingExtraHours] = useState(false);
 
-  // Extra hours form states
   const [extraHoursDate, setExtraHoursDate] = useState<string>('');
   const [extraHoursCount, setExtraHoursCount] = useState<number | string>('');
   const [extraHoursNotes, setExtraHoursNotes] = useState<string>('');
 
-  // Extra hours display states
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [selectedMonth, setSelectedMonth] = useState<number>(getMonth(new Date()));
   const [selectedQuincena, setSelectedQuincena] = useState<'first' | 'second'>(
@@ -78,7 +76,7 @@ export default function DashboardPage() {
     }
   }, [currentUser, dateRange]);
 
-  const getPeriodDates = (year: number, month: number, quincena: 'first' | 'second') => {
+  const getPeriodDates = useCallback((year: number, month: number, quincena: 'first' | 'second') => {
     const firstDayOfMonth = new Date(year, month, 1);
     let startDate: Date;
     let endDate: Date;
@@ -91,52 +89,62 @@ export default function DashboardPage() {
       endDate = lastDayOfMonth(firstDayOfMonth);
     }
     return {
+      startDate, // Return as Date object
+      endDate, // Return as Date object
       startDateString: format(startDate, 'yyyy-MM-dd'),
       endDateString: format(endDate, 'yyyy-MM-dd'),
     };
-  };
+  }, []);
 
-  useEffect(() => {
+  const fetchExtraHoursLog = useCallback(async () => {
     if (!currentUser) return;
 
-    const fetchExtraHoursLog = async () => {
-      setIsLoadingLog(true);
-      const { startDateString, endDateString } = getPeriodDates(selectedYear, selectedMonth, selectedQuincena);
+    setIsLoadingLog(true);
+    console.log("[DEBUG] Iniciando carga de horas extra...");
+    const { startDateString, endDateString, startDate, endDate } = getPeriodDates(selectedYear, selectedMonth, selectedQuincena);
+    
+    console.log(`[DEBUG] Periodo para consulta: User: ${currentUser.id}, Desde: ${startDateString}, Hasta: ${endDateString}`);
 
-      try {
-        const q = query(
-          collection(db, "extraHoursEntries"),
-          where("userId", "==", currentUser.id),
-          where("date", ">=", startDateString),
-          where("date", "<=", endDateString),
-          orderBy("date", "asc")
-        );
-        const querySnapshot = await getDocs(q);
-        const entries = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            // Convert Firestore Timestamp to JS Date for loggedAt if needed for display formatting
-            loggedAt: data.loggedAt instanceof Timestamp ? data.loggedAt.toDate() : data.loggedAt,
-          } as ExtraHoursEntry;
-        });
-        setExtraHoursLog(entries);
-      } catch (error) {
-        console.error("Error al obtener horas extra: ", error);
-        toast({
-          title: "Error al Cargar Horas",
-          description: "No se pudieron cargar las horas extras registradas.",
-          variant: "destructive",
-        });
-        setExtraHoursLog([]);
-      } finally {
-        setIsLoadingLog(false);
-      }
-    };
+    try {
+      const q = query(
+        collection(db, "extraHoursEntries"),
+        where("userId", "==", currentUser.id),
+        where("date", ">=", startDateString),
+        where("date", "<=", endDateString),
+        orderBy("date", "asc")
+      );
+      const querySnapshot = await getDocs(q);
+      console.log(`[DEBUG] Documentos encontrados: ${querySnapshot.docs.length}`);
+      
+      const entries = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log("[DEBUG] Documento individual:", doc.id, data);
+        return {
+          id: doc.id,
+          ...data,
+          loggedAt: data.loggedAt instanceof Timestamp ? data.loggedAt.toDate() : data.loggedAt,
+        } as ExtraHoursEntry;
+      });
+      
+      setExtraHoursLog(entries);
+      console.log("[DEBUG] Horas extra cargadas en estado:", entries);
 
+    } catch (error) {
+      console.error("Error al obtener horas extra: ", error);
+      toast({
+        title: "Error al Cargar Horas",
+        description: "No se pudieron cargar las horas extras registradas. Revisa la consola para más detalles.",
+        variant: "destructive",
+      });
+      setExtraHoursLog([]);
+    } finally {
+      setIsLoadingLog(false);
+    }
+  }, [currentUser, selectedYear, selectedMonth, selectedQuincena, toast, getPeriodDates]);
+
+  useEffect(() => {
     fetchExtraHoursLog();
-  }, [currentUser, selectedYear, selectedMonth, selectedQuincena, toast]);
+  }, [fetchExtraHoursLog]);
 
 
   const handleLogExtraHours = async () => {
@@ -155,13 +163,14 @@ export default function DashboardPage() {
     try {
       const extraHoursData: Omit<ExtraHoursEntry, 'id' | 'loggedAt'> & { loggedAt: any } = {
         userId: currentUser.id,
-        date: extraHoursDate,
+        date: extraHoursDate, // This is "yyyy-MM-dd" string
         hours: hours,
         notes: extraHoursNotes || '',
         loggedAt: serverTimestamp(),
       };
 
       const docRef = await addDoc(collection(db, "extraHoursEntries"), extraHoursData);
+      console.log("[DEBUG] Horas extra registradas con ID:", docRef.id, extraHoursData);
 
       toast({
         title: "Horas Extra Registradas",
@@ -170,37 +179,12 @@ export default function DashboardPage() {
       setExtraHoursDate('');
       setExtraHoursCount('');
       setExtraHoursNotes('');
-      // Refetch logs if the newly added entry falls into the currently selected period
-      const { startDateString, endDateString } = getPeriodDates(selectedYear, selectedMonth, selectedQuincena);
-      if (extraHoursData.date >= startDateString && extraHoursData.date <= endDateString) {
-         // Trigger refetch by slightly changing one of the dependencies or calling fetch directly
-         // For simplicity, we can rely on the next natural refetch or manually call it:
-         if (currentUser) { // Re-check currentUser as it's a dependency for fetchExtraHoursLog
-            const fetchExtraHoursLog = async () => { // Duplicated to avoid making it a top-level dependency
-              setIsLoadingLog(true);
-              try {
-                const q = query(
-                  collection(db, "extraHoursEntries"),
-                  where("userId", "==", currentUser.id),
-                  where("date", ">=", startDateString),
-                  where("date", "<=", endDateString),
-                  orderBy("date", "asc")
-                );
-                const querySnapshot = await getDocs(q);
-                const entries = querySnapshot.docs.map(doc => {
-                  const data = doc.data();
-                  return {
-                    id: doc.id,
-                    ...data,
-                    loggedAt: data.loggedAt instanceof Timestamp ? data.loggedAt.toDate() : data.loggedAt,
-                  } as ExtraHoursEntry;
-                });
-                setExtraHoursLog(entries);
-              } catch (error) { console.error("Error refetching logs", error); }
-              finally { setIsLoadingLog(false); }
-            };
-            fetchExtraHoursLog();
-         }
+
+      // Check if the newly added entry falls into the currently selected period and refetch
+      const { startDateString: currentPeriodStart, endDateString: currentPeriodEnd } = getPeriodDates(selectedYear, selectedMonth, selectedQuincena);
+      if (extraHoursData.date >= currentPeriodStart && extraHoursData.date <= currentPeriodEnd) {
+        console.log("[DEBUG] Nuevo registro está en el período actual. Re-cargando historial.");
+        fetchExtraHoursLog(); // Call the memoized fetch function
       }
 
     } catch (error) {
@@ -403,4 +387,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
