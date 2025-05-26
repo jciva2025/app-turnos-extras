@@ -1,5 +1,5 @@
 
-import type { Timestamp } from 'firebase/firestore';
+import type { Timestamp as FirebaseTimestamp } from 'firebase/firestore'; // Renombrado para evitar conflicto
 
 export interface TeamMember {
   id: string;
@@ -9,7 +9,8 @@ export interface TeamMember {
   photoUrl: string;
 }
 
-export type TeamId = 'team_a' | 'team_b' | 'team_c' | 'team_d';
+export type TeamId = 'team_a' | 'team_b' | 'team_c' | 'team_d' | 'admin' | 'unassigned';
+
 
 export interface Team {
   id: TeamId;
@@ -64,5 +65,14 @@ export interface ExtraHoursEntry {
   date: string; // YYYY-MM-DD, used for querying
   hours: number;
   notes?: string;
-  loggedAt: Timestamp | Date; // Firestore Timestamp on save, JS Date on retrieval for easier use
+  loggedAt: FirebaseTimestamp | Date; // Firestore Timestamp on save, JS Date on retrieval for easier use
+}
+
+export interface ChatMessage {
+  id?: string; // Firestore document ID
+  userId: string;
+  userName: string;
+  userPhotoUrl?: string;
+  text: string;
+  timestamp: FirebaseTimestamp | Date | null; // Firestore Timestamp on save, JS Date or null on retrieval
 }
