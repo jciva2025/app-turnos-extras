@@ -1,14 +1,15 @@
+
 import type { TeamMember, Team, Holiday, ShiftBlock, TeamId } from './types';
 
 export const TEAM_MEMBERS: TeamMember[] = [
-  { id: 'gonzalo_r', name: 'Gonzalo Rodríguez', teamId: 'team_a', loginKey: 'gr123', photoUrl: 'https://placehold.co/100x100.png?text=GR' },
-  { id: 'francisco_g', name: 'Francisco Garces', teamId: 'team_a', loginKey: 'fg123', photoUrl: 'https://placehold.co/100x100.png?text=FG' },
-  { id: 'sergio_s', name: 'Sergio Sosa', teamId: 'team_b', loginKey: 'ss123', photoUrl: 'https://placehold.co/100x100.png?text=SS' },
-  { id: 'alexis_m', name: 'Alexis Monasterio', teamId: 'team_b', loginKey: 'am123', photoUrl: 'https://placehold.co/100x100.png?text=AM' },
-  { id: 'jorge_c', name: 'Jorge Civalero', teamId: 'team_c', loginKey: 'jc123', photoUrl: 'https://placehold.co/100x100.png?text=JC' },
-  { id: 'juan_b', name: 'Juan Bilbao', teamId: 'team_c', loginKey: 'jb123', photoUrl: 'https://placehold.co/100x100.png?text=JB' },
-  { id: 'andres_f', name: 'Andres Flores', teamId: 'team_d', loginKey: 'af123', photoUrl: 'https://placehold.co/100x100.png?text=AF' },
-  { id: 'matias_v', name: 'Matias Vilela', teamId: 'team_d', loginKey: 'mv123', photoUrl: 'https://placehold.co/100x100.png?text=MV' },
+  { id: 'gonzalo_r', name: 'Gonzalo Rodríguez', teamId: 'team_a', loginKey: 'gr123', photoUrl: '/gonzalo_r.png' },
+  { id: 'francisco_g', name: 'Francisco Garces', teamId: 'team_a', loginKey: 'fg123', photoUrl: '/francisco_g.png' },
+  { id: 'sergio_s', name: 'Sergio Sosa', teamId: 'team_b', loginKey: 'ss123', photoUrl: '/sergio_s.png' },
+  { id: 'alexis_m', name: 'Alexis Monasterio', teamId: 'team_b', loginKey: 'am123', photoUrl: '/alexis_m.png' },
+  { id: 'jorge_c', name: 'Jorge Civalero', teamId: 'team_c', loginKey: 'jc123', photoUrl: '/jorge_c.png' },
+  { id: 'juan_b', name: 'Juan Bilbao', teamId: 'team_c', loginKey: 'jb123', photoUrl: '/juan_b.png' },
+  { id: 'andres_f', name: 'Andres Flores', teamId: 'team_d', loginKey: 'af123', photoUrl: '/andres_f.png' },
+  { id: 'matias_v', name: 'Matias Vilela', teamId: 'team_d', loginKey: 'mv123', photoUrl: '/matias_v.png' },
 ];
 
 export const TEAMS: Record<TeamId, Team> = {
@@ -72,3 +73,4 @@ export const ARGENTINA_HOLIDAYS: Holiday[] = [
   { date: "2024-12-08", name: "Inmaculada Concepción de María" },
   { date: "2024-12-25", name: "Navidad" },
 ];
+
