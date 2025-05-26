@@ -19,25 +19,25 @@ export const TEAMS: Record<TeamId, Team> = {
   team_d: { id: 'team_d', name: 'Turno D', members: ['andres_f', 'matias_v'] },
 };
 
-// Fecha de referencia: 21 de Mayo de 2024.
-// En esta fecha, team_c trabaja de día y team_d de noche, iniciando el ciclo 3-3-2-2.
-export const REFERENCE_DATE = new Date(2024, 4, 21); // Mayo 21, 2024 (month is 0-indexed, 4 = Mayo)
+// Fecha de referencia: 24 de Mayo de 2025.
+// En esta fecha, team_a trabaja de día y team_b de noche, iniciando el ciclo 3-3-2-2.
+export const REFERENCE_DATE = new Date(2025, 4, 24); // Mayo 24, 2025 (month is 0-indexed, 4 = Mayo)
 export const CYCLE_LENGTH = 20; // days
 
 // Patrón de turnos: 3-3-2-2 y luego se invierte.
 // Total 10 días, luego inversión para otros 10 días.
 export const SHIFT_PATTERN: ShiftBlock[] = [
   // Primeros 10 días del ciclo (turnos estándar)
-  { duration: 3, assignments: { day: 'team_c', night: 'team_d' } }, // Días 0-2. C(día)/D(noche) trabajan. A/B francos.
-  { duration: 3, assignments: { day: 'team_a', night: 'team_b' } }, // Días 3-5. A(día)/B(noche) trabajan. C/D francos.
-  { duration: 2, assignments: { day: 'team_c', night: 'team_d' } }, // Días 6-7. C(día)/D(noche) trabajan. A/B francos.
-  { duration: 2, assignments: { day: 'team_a', night: 'team_b' } }, // Días 8-9. A(día)/B(noche) trabajan. C/D francos.
+  { duration: 3, assignments: { day: 'team_a', night: 'team_b' } }, // Días 0-2. A(día)/B(noche) trabajan. C/D francos.
+  { duration: 3, assignments: { day: 'team_c', night: 'team_d' } }, // Días 3-5. C(día)/D(noche) trabajan. A/B francos.
+  { duration: 2, assignments: { day: 'team_a', night: 'team_b' } }, // Días 6-7. A(día)/B(noche) trabajan. C/D francos.
+  { duration: 2, assignments: { day: 'team_c', night: 'team_d' } }, // Días 8-9. C(día)/D(noche) trabajan. A/B francos.
 
   // Siguientes 10 días del ciclo (turnos invertidos)
-  { duration: 3, assignments: { day: 'team_d', night: 'team_c' } }, // Días 10-12. D(día)/C(noche) trabajan (invierte C/D). A/B francos.
-  { duration: 3, assignments: { day: 'team_b', night: 'team_a' } }, // Días 13-15. B(día)/A(noche) trabajan (invierte A/B). C/D francos.
-  { duration: 2, assignments: { day: 'team_d', night: 'team_c' } }, // Días 16-17. D(día)/C(noche) trabajan (invierte C/D). A/B francos.
-  { duration: 2, assignments: { day: 'team_b', night: 'team_a' } }, // Días 18-19. B(día)/A(noche) trabajan (invierte A/B). C/D francos.
+  { duration: 3, assignments: { day: 'team_b', night: 'team_a' } }, // Días 10-12. B(día)/A(noche) trabajan (invierte A/B). C/D francos.
+  { duration: 3, assignments: { day: 'team_d', night: 'team_c' } }, // Días 13-15. D(día)/C(noche) trabajan (invierte C/D). A/B francos.
+  { duration: 2, assignments: { day: 'team_b', night: 'team_a' } }, // Días 16-17. B(día)/A(noche) trabajan (invierte A/B). C/D francos.
+  { duration: 2, assignments: { day: 'team_d', night: 'team_c' } }, // Días 18-19. D(día)/C(noche) trabajan (invierte C/D). A/B francos.
 ];
 
 
@@ -55,12 +55,12 @@ export const ARGENTINA_HOLIDAYS: Holiday[] = [
   { date: "2025-04-02", name: "Día del Veterano y de los Caídos en la Guerra de Malvinas" },
   { date: "2025-04-18", name: "Viernes Santo" },
   { date: "2025-05-01", name: "Día del Trabajador" },
-  { date: "2025-05-25", name: "Día de la Revolución de Mayo" },
+  { date: "2025-05-25", name: "Día de la Revolución de Mayo" }, // Este es un domingo en 2025
   { date: "2025-06-20", name: "Paso a la Inmortalidad del Gral. Manuel Belgrano" },
   { date: "2025-07-09", name: "Día de la Independencia" },
-  { date: "2025-08-18", name: "Paso a la Inmortalidad del Gral. José de San Martín" }, // Trasladado del 17/8
-  { date: "2025-10-13", name: "Día del Respeto a la Diversidad Cultural" }, // Trasladado del 12/10
-  { date: "2025-11-24", name: "Día de la Soberanía Nacional (Trasladable)"}, // Originalmente 20/11, ejemplo de trasladable
+  { date: "2025-08-18", name: "Paso a la Inmortalidad del Gral. José de San Martín" }, // Trasladado del 17/8 (Lunes)
+  { date: "2025-10-13", name: "Día del Respeto a la Diversidad Cultural" }, // Trasladado del 12/10 (Lunes)
+  { date: "2025-11-24", name: "Día de la Soberanía Nacional (Trasladable)"}, // Lunes, trasladado del 20/11
   { date: "2025-12-08", name: "Inmaculada Concepción de María" },
   { date: "2025-12-25", name: "Navidad" },
   // 2024 Example Holidays (for testing with current dates)
@@ -84,5 +84,4 @@ export const ARGENTINA_HOLIDAYS: Holiday[] = [
   { date: "2024-12-08", name: "Inmaculada Concepción de María" }, // Este es un domingo en 2024
   { date: "2024-12-25", name: "Navidad" },
 ];
-
     
