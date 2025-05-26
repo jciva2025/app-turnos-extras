@@ -24,16 +24,26 @@ export default function HomePage() {
     setSelectedMember(null);
   };
 
+  const AndroidLogoSvg = () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="h-5 w-5 inline-block ml-1"
+      aria-label="Android Logo"
+    >
+      <path d="M17.42 4.67A8.53 8.53 0 0012 2.5a8.53 8.53 0 00-5.42 2.17A9 9 0 002 12.75v2.5A2.75 2.75 0 004.75 18h14.5A2.75 2.75 0 0022 15.25v-2.5a9 9 0 00-4.58-8.08zM8 14H6v-2h2zm10 0h-2v-2h2zM9.5 6.5a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm5 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+      <path d="M4.75 19a1 1 0 001 1h3.5v1.5a.75.75 0 001.5 0V20h3.5v1.5a.75.75 0 001.5 0V20h3.5a1 1 0 001-1v-.5H4.75z" />
+    </svg>
+  );
+
+
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center p-4 bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: "url('/fondodepantalla.jpg')" }}
       data-ai-hint="industrial factory"
     >
-      {/* Optional: Add an overlay for better text readability if needed 
-      <div className="absolute inset-0 bg-black/50 z-0"></div> 
-      Ensure content below has a higher z-index if using an overlay like this.
-      */}
       <header className="mb-12 z-10">
         <AppLogo size="lg" />
       </header>
@@ -76,8 +86,12 @@ export default function HomePage() {
           onClose={closeModal}
         />
       )}
-      <footer className="mt-12 text-center text-muted-foreground text-sm z-10 bg-background/70 backdrop-blur-sm p-2 rounded">
-        <p>&copy; {new Date().getFullYear()} Cuarto turno mtto. Mecanizado. Todos los derechos reservados.</p>
+      <footer className="mt-12 text-center text-sm z-10 bg-background/70 backdrop-blur-sm p-3 rounded">
+        <p className="text-muted-foreground">&copy; {new Date().getFullYear()} Cuarto turno mtto. Mecanizado. Todos los derechos reservados.</p>
+        <p className="text-muted-foreground/80 text-xs mt-1 flex items-center justify-center">
+          Powered by jotaciva.app
+          <AndroidLogoSvg />
+        </p>
       </footer>
     </div>
   );
